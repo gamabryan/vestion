@@ -275,3 +275,13 @@ def test_start_speaks_briefing_when_connected():
     app.start(run_background=False)
     assert app.speaker.said[-1] == "Bom dia. Sua agenda está livre hoje."
     assert "Oi, estou pronto." not in app.speaker.said
+
+
+def test_new_utterance_clears_mail_taint():
+    from lia.permissions import Taint
+    app = make_app(["oi"])
+    app.taint = Taint()
+    app.taint.observe("mcp__lia__gmail_ler")
+    app.on_hotkey()
+    assert app.wait_jobs()
+    assert not app.taint.active

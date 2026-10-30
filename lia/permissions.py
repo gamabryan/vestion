@@ -74,8 +74,41 @@ def _touches_secrets(tool_input: dict) -> bool:
     return any(isinstance(v, str) and _SECRET.search(v) for v in tool_input.values())
 
 
-def needs_confirmation(tool_name: str, tool_input: dict) -> bool:
+# ---- Conteúdo não confiável (e-mails) ------------------------------------------------
+# Depois que o Claude lê e-mails, um e-mail malicioso pode mandá-lo vazar dados por um site,
+# download ou script. Até o próximo pedido do usuário, tudo que sai do PC pede o cartão.
+UNTRUSTED_READS = {"mcp__lia__gmail_ler", "mcp__lia__gmail_buscar", "mcp__lia__gmail_nao_lidos"}
+_OUTBOUND = re.compile(r"https?://|www\.|\b(curl|wget|iwr|irm|Invoke-WebRequest|Invoke-RestMethod|Start-Process|"
+                       r"start|nslookup|ping|Resolve-DnsName|Test-NetConnection|ftp|scp|ssh|python3?|py|node)\b",
+                       re.IGNORECASE)
+
+
+class Taint:
+    def __init__(self):
+        self.active = False
+
+    def observe(self, tool_name: str) -> None:
+        if tool_name in UNTRUSTED_READS:
+            self.active = True
+
+    def reset(self) -> None:
+        self.active = False
+
+
+def _outbound(tool_name: str, tool_input: dict) -> bool:
+    if tool_name in ("WebFetch", "WebSearch"):
+        return True
+    if tool_name == "mcp__lia__lia_abrir":
+        return bool(re.search(r"://|www\.", str(tool_input.get("alvo", ""))))
+    if tool_name in ("Bash", "PowerShell"):
+        return bool(_OUTBOUND.search(str(tool_input.get("command", ""))))
+    return False
+
+
+def needs_confirmation(tool_name: str, tool_input: dict, tainted: bool = False) -> bool:
     if _touches_secrets(tool_input):
+        return True
+    if tainted and _outbound(tool_name, tool_input):
         return True
     if tool_name in AUTO_TOOLS:
         return False

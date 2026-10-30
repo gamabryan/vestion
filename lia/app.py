@@ -33,6 +33,7 @@ class LiaApp:
         self.bridge = bridge
         self.on_quit: list[Callable[[], None]] = []
         self.briefing: Callable[[], str] | None = None  # resumo do dia ao abrir (agenda + Gmail)
+        self.taint = None  # Taint compartilhado com a ponte (e-mails lidos neste pedido)
         self._jobs: queue.Queue[str] = queue.Queue()
         self._listen_lock = threading.Lock()
         self._running = True
@@ -132,6 +133,8 @@ class LiaApp:
                 self._jobs.task_done()
 
     def handle_utterance(self, text: str) -> None:
+        if self.taint:
+            self.taint.reset()  # pedido novo do usuário: e-mails lidos antes não contam mais
         self.window.set_state("thinking")
         if self.brain.needs_new_session(datetime.now()):
             self.brain.new_session()
@@ -215,7 +218,7 @@ def main() -> None:
     from lia.hotkey import register_hotkey
     from lia.mcp_config import write_mcp_config
     from lia.panels import PanelUpdater
-    from lia.permissions import ALLOWED_TOOLS, make_describer
+    from lia.permissions import ALLOWED_TOOLS, Taint, make_describer
     from lia.tray import start_tray
     from lia.ui_window import CentralWindow
 
@@ -239,7 +242,8 @@ def main() -> None:
         clients = google_clients()
         return clients[1] if clients else None
 
-    port, token = start_bridge(bridge, describe=make_describer(calendar_only))
+    taint = Taint()
+    port, token = start_bridge(bridge, describe=make_describer(calendar_only), taint=taint)
     mcp_cfg = write_mcp_config(cfg.workspace / ".lia" / "mcp.json", port, token, workspace=cfg.workspace)
     window = CentralWindow(on_confirm=bridge.resolve)
     brain = Brain(cfg, mcp_cfg, lambda: holder["app"].on_api_key_removed(), ALLOWED_TOOLS)
@@ -258,6 +262,7 @@ def main() -> None:
         return briefing_text(now, calendar.today(now), gmail.unread(10))
 
     app.briefing = briefing
+    app.taint = taint
 
     def connect_google():
         if not credentials_file(cfg.workspace).exists():
