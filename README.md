@@ -19,7 +19,8 @@ Requisito: o Claude Code instalado e logado com a sua conta (`claude` no termina
 ## Usar
 
 - Abra pelo atalho **Vestion**. A central aparece e ele diz "Oi, estou pronto."
-- Aperte **Ctrl + Alt + A** e fale. Ele para de ouvir quando você faz uma pausa.
+- **Segure a tecla Tab** por meio segundo e fale. Ele para de ouvir quando você faz uma pausa.
+  Um toque rápido no Tab continua funcionando normal em qualquer programa, e Alt+Tab não chama o Vestion.
 - Se apertar o atalho enquanto ele fala, ele para e escuta você.
 - Fechar a janela só esconde o Vestion; ele fica no ícone perto do relógio. Para encerrar: clique com o botão direito no ícone → **Sair**.
 

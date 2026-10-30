@@ -1,5 +1,6 @@
 # Copie para config.toml e ajuste o que quiser.
-hotkey = "ctrl+alt+a"
+hotkey = "tab"          # tecla a segurar (ou uma combinação, ex. "ctrl+alt+a")
+hotkey_hold_s = 0.4      # segundos segurando; 0 = combinação apertada normalmente
 voice = "pt-BR-AntonioNeural"
 piper_voice = "pt_BR-faber-medium"
 whisper_model = "auto"   # auto, small, medium

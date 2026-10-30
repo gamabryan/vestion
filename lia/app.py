@@ -225,7 +225,7 @@ def main() -> None:
     app = LiaApp(cfg, brain, Listener(cfg), Speaker(cfg), window, bridge)
     holder["app"] = app
 
-    unhook = register_hotkey(cfg.hotkey, app.on_hotkey)
+    unhook = register_hotkey(cfg.hotkey, app.on_hotkey, cfg.hotkey_hold_s)
     tray = start_tray(on_open=window.show, on_quit=app.quit)
     app.on_quit += [unhook, tray.stop]
 
