@@ -75,6 +75,20 @@
   $("btn-reminder-done").addEventListener("click", () => answerReminder(true));
   $("btn-reminder-snooze").addEventListener("click", () => answerReminder(false));
 
+  // Legenda some alguns segundos depois que ele termina de falar (a espera cobre a pausa entre frases).
+  const CAPTION_FADE_MS = 3000;
+  let fadeTimer = null;
+  function scheduleCaptionFade(ms) {
+    clearTimeout(fadeTimer);
+    const footer = document.querySelector(".caption");
+    footer.classList.remove("faded");
+    if (!ms) return;
+    fadeTimer = setTimeout(() => {
+      footer.classList.add("faded");
+      fadeTimer = setTimeout(() => { $("caption").textContent = ""; $("you").textContent = ""; }, 900);
+    }, ms);
+  }
+
   // Tema de cor (ciano / vermelho): só troca as cores, o layout fica igual.
   const THEMES = ["cyan", "red"];
   $("theme-toggle").addEventListener("click", () => {
@@ -100,6 +114,7 @@
       document.body.classList.remove("idle", "listening", "thinking", "speaking");
       document.body.classList.add(state);
       $("state-label").textContent = "· " + (STATE_LABELS[state] || state.toUpperCase());
+      scheduleCaptionFade(state === "idle" && $("caption").textContent ? CAPTION_FADE_MS : 0);
     },
     // Volume da frase que começou a tocar agora (um valor 0..1 a cada frameMs): move a boca do rosto 3D.
     speak(envelope, frameMs) {
@@ -111,6 +126,8 @@
       } else {
         $("caption").textContent = text;
       }
+      // Texto novo aparece; se nada for falado (só escrito), some depois de um tempo maior.
+      scheduleCaptionFade(this.state === "idle" ? CAPTION_FADE_MS * 3 : 0);
     },
     showConfirm(id, title, detail) {
       pendingId = id;
