@@ -11,7 +11,7 @@ from lia.permissions import describe_action, needs_confirmation
 log = logging.getLogger(__name__)
 
 
-def start_bridge(bridge: ConfirmBridge) -> tuple[int, str]:
+def start_bridge(bridge: ConfirmBridge, describe=describe_action) -> tuple[int, str]:
     token = secrets.token_hex(16)
 
     class Handler(BaseHTTPRequestHandler):
@@ -24,7 +24,7 @@ def start_bridge(bridge: ConfirmBridge) -> tuple[int, str]:
                 length = int(self.headers.get("Content-Length", 0))
                 body = json.loads(self.rfile.read(length))
                 tool_name, tool_input = str(body["tool_name"]), dict(body.get("input") or {})
-                card = describe_action(tool_name, tool_input)
+                card = describe(tool_name, tool_input)
             except (ValueError, KeyError, TypeError):
                 self.send_error(400)
                 return

@@ -124,3 +124,12 @@ def test_http_important_action_shows_card():
     threading.Thread(target=lambda: bridge.resolve(wait_shown(shown), False)).start()
     assert _post(port, token, {"tool_name": "Bash", "input": {"command": "Remove-Item a.txt"}}) == {"approved": False}
     assert shown[0][1].title == "Executar comando"
+
+
+def test_http_uses_custom_describer_for_card():
+    from lia.permissions import ActionCard as Card
+    bridge, shown = make_bridge()
+    port, token = start_bridge(bridge, describe=lambda name, inp: Card("Cancelar compromisso", "Reunião real — 30/10 15:00", "Posso?"))
+    threading.Thread(target=lambda: bridge.resolve(wait_shown(shown), False)).start()
+    assert _post(port, token, {"tool_name": "mcp__lia__agenda_cancelar", "input": {"id": "e1"}}) == {"approved": False}
+    assert shown[0][1].detail == "Reunião real — 30/10 15:00"

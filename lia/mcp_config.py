@@ -6,20 +6,15 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
-def write_mcp_config(path: Path, port: int, token: str) -> Path:
-    config = {
-        "mcpServers": {
-            "lia": {
-                "command": sys.executable,
-                "args": ["-m", "lia.mcp_server"],
-                "env": {
-                    "LIA_BRIDGE_PORT": str(port),
-                    "LIA_BRIDGE_TOKEN": token,
-                    "PYTHONPATH": str(PROJECT_ROOT),
-                },
-            }
-        }
+def write_mcp_config(path: Path, port: int, token: str, workspace: Path | None = None) -> Path:
+    env = {
+        "LIA_BRIDGE_PORT": str(port),
+        "LIA_BRIDGE_TOKEN": token,
+        "PYTHONPATH": str(PROJECT_ROOT),
     }
+    if workspace:
+        env["LIA_WORKSPACE"] = str(workspace)  # onde fica o token do Google
+    config = {"mcpServers": {"lia": {"command": sys.executable, "args": ["-m", "lia.mcp_server"], "env": env}}}
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, indent=2), encoding="utf-8")

@@ -28,7 +28,10 @@ CREATE_NO_WINDOW = 0x08000000
 # Windows, dinheiro, contas e senhas. O resto (criar, editar, mover, organizar, abrir,
 # comandos do dia a dia) roda direto. Comandos que escondem outro comando também pedem.
 AUTO_TOOLS = {"Read", "Glob", "Grep", "LS", "Edit", "MultiEdit", "NotebookEdit", "TodoWrite",
-              "WebFetch", "WebSearch", "mcp__lia__lia_abrir"}
+              "WebFetch", "WebSearch", "mcp__lia__lia_abrir",
+              # Gmail/Agenda: ler, rascunhar e mudar horário (sem avisar convidados) rodam direto
+              "mcp__lia__gmail_nao_lidos", "mcp__lia__gmail_buscar", "mcp__lia__gmail_ler",
+              "mcp__lia__gmail_rascunho", "mcp__lia__agenda_listar", "mcp__lia__agenda_mover"}
 
 _RISKY = [
     # apagar / destruir
@@ -76,6 +79,8 @@ def needs_confirmation(tool_name: str, tool_input: dict) -> bool:
         return True
     if tool_name in AUTO_TOOLS:
         return False
+    if tool_name == "mcp__lia__agenda_criar":
+        return bool(tool_input.get("convidados"))  # com convidados, o Google manda convites
     if tool_name == "Write":
         return Path(str(tool_input.get("file_path", ""))).exists()
     if tool_name in ("Bash", "PowerShell"):
@@ -106,6 +111,19 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
     elif tool_name in ("Edit", "MultiEdit"):
         title, detail = "Alterar arquivo", path
         spoken = f"Posso alterar o arquivo {name}?"
+    elif tool_name == "mcp__lia__gmail_enviar":
+        title = "Enviar e-mail"
+        detail = (f"Para: {tool_input.get('para', '')}\nAssunto: {tool_input.get('assunto', '')}\n\n"
+                  f"{tool_input.get('texto', '')}")
+        spoken = "Posso enviar o e-mail que está na tela?"
+    elif tool_name == "mcp__lia__agenda_criar":
+        title = "Criar compromisso e enviar convites"
+        detail = (f"{tool_input.get('titulo', '')}\n{tool_input.get('inicio', '')} até {tool_input.get('fim', '')}\n"
+                  f"Convidados: {', '.join(tool_input.get('convidados') or [])}")
+        spoken = "Posso criar o compromisso e mandar os convites?"
+    elif tool_name == "mcp__lia__agenda_cancelar":
+        title, detail = "Cancelar compromisso", f"Compromisso id {tool_input.get('id', '')}"
+        spoken = "Posso cancelar o compromisso que está na tela?"
     elif tool_name == "mcp__lia__lia_admin":
         title, detail = "Comando de administrador", tool_input.get("comando", "")
         spoken = "Posso executar o comando de administrador que está na tela?"
@@ -114,6 +132,23 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
         detail = json.dumps(tool_input, ensure_ascii=False)[:400]
         spoken = "Posso continuar com a ação que está na tela?"
     return ActionCard(title, detail, spoken)
+
+
+def make_describer(calendar_getter):
+    """describe_action, mas o cartão de cancelar mostra o compromisso real buscado no Google pelo id,
+    e não o texto que o Claude mandou."""
+    def describe(tool_name: str, tool_input: dict) -> ActionCard:
+        card = describe_action(tool_name, tool_input)
+        if tool_name == "mcp__lia__agenda_cancelar":
+            event_id = str(tool_input.get("id", ""))
+            try:
+                event = calendar_getter().get(event_id)
+                when = "Dia todo" if event["dia_todo"] else event["inicio"].astimezone().strftime("%H:%M")
+                card.detail = f"{event['titulo']} — {event['inicio'].strftime('%d/%m')} {when}"
+            except Exception:
+                card.detail = f"Compromisso id {event_id} (não consegui confirmar no Google)"
+        return card
+    return describe
 
 
 def _clean(target: str) -> str:
