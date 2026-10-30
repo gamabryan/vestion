@@ -5,6 +5,9 @@
   const DAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
   const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
   let pendingId = null;
+  let shownAt = 0;
+  // Teclas e cliques logo depois do cartão aparecer não contam: a pessoa pode estar digitando em outro lugar.
+  const GUARD_MS = 1000;
 
   function tick() {
     const d = new Date();
@@ -16,7 +19,7 @@
   setInterval(tick, 5000);
 
   function answer(approved) {
-    if (!pendingId) return;
+    if (!pendingId || Date.now() - shownAt < GUARD_MS) return;
     const id = pendingId;
     window.lia.hideConfirm(id);
     if (window.pywebview && window.pywebview.api) window.pywebview.api.confirm(id, approved);
@@ -68,6 +71,7 @@
     },
     showConfirm(id, title, detail) {
       pendingId = id;
+      shownAt = Date.now();
       $("confirm-title").textContent = title;
       $("confirm-detail").textContent = detail;
       $("confirm").hidden = false;

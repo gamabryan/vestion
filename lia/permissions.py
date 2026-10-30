@@ -1,19 +1,19 @@
 """O que a Lia pode fazer sem perguntar, e como cada ação aparece no cartão de confirmação."""
 import json
 import os
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 # Só leitura. Tudo que não está aqui passa pelo cartão PODE / CANCELAR.
-ALLOWED_TOOLS = [
-    "Read", "Glob", "Grep", "mcp__lia__lia_abrir",
-    "Bash(dir:*)", "Bash(Get-ChildItem:*)", "Bash(Get-Process:*)", "Bash(Get-Date:*)",
-    "Bash(whoami)", "Bash(hostname)",
-]
+# Nenhum comando de shell é pré-liberado: prefixos não protegem contra redirecionamento (dir > x).
+ALLOWED_TOOLS = ["Read", "Glob", "Grep", "mcp__lia__lia_abrir"]
 
-UNSAFE_TO_OPEN = {".bat", ".cmd", ".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh",
-                  ".msi", ".reg", ".scr", ".hta", ".com", ".pif"}
+# Abrir sem perguntar só vale para documentos e mídia (lista do que pode, não do que não pode).
+SAFE_TO_OPEN = {".pdf", ".txt", ".md", ".rtf", ".doc", ".docx", ".odt", ".xls", ".xlsx", ".ods", ".csv",
+                ".ppt", ".pptx", ".odp", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg",
+                ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".mp4", ".mkv", ".avi", ".mov", ".webm"}
 
 START_MENUS = [
     Path(os.environ.get("ProgramData", r"C:\ProgramData")) / "Microsoft/Windows/Start Menu/Programs",
@@ -58,8 +58,31 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
     return ActionCard(title, detail, spoken)
 
 
+def _clean(target: str) -> str:
+    # O Windows ignora ponto e espaço no fim do nome ("x.bat." abre x.bat).
+    return target.strip().rstrip(" .")
+
+
+def _in_start_menu(path: Path) -> bool:
+    try:
+        resolved = path.resolve()
+    except OSError:
+        return False
+    return any(resolved.is_relative_to(root.resolve()) for root in START_MENUS if str(root))
+
+
 def is_safe_to_open(target: str) -> bool:
-    return Path(target).suffix.lower() not in UNSAFE_TO_OPEN
+    """Documentos/mídia, pastas, sites e atalhos do menu Iniciar. Qualquer outra coisa precisa do cartão."""
+    cleaned = _clean(target)
+    if re.match(r"(?i)^https?://", cleaned):
+        return True
+    path = Path(os.path.expandvars(os.path.expanduser(cleaned)))
+    suffix = path.suffix.lower()
+    if suffix == ".lnk":
+        return _in_start_menu(path)
+    if suffix in SAFE_TO_OPEN:
+        return True
+    return path.is_dir()
 
 
 def _find_shortcut(name: str) -> Path | None:
@@ -77,16 +100,23 @@ def _find_shortcut(name: str) -> Path | None:
 
 
 def open_target(target: str) -> str:
-    """Abre um arquivo, pasta ou programa (pelo nome do menu Iniciar) para o usuário ver."""
-    if not is_safe_to_open(target):
+    """Abre um documento, pasta, site ou programa do menu Iniciar para o usuário ver."""
+    cleaned = _clean(target)
+    path = Path(os.path.expandvars(os.path.expanduser(cleaned)))
+    is_name = not path.suffix and "\\" not in cleaned and "/" not in cleaned
+    if is_name:
+        resolved = _find_shortcut(cleaned)  # nome de programa: só o que está no menu Iniciar
+        if not resolved:
+            return f"Não encontrei o programa {cleaned} no menu Iniciar."
+    elif is_safe_to_open(cleaned):
+        resolved = cleaned if re.match(r"(?i)^https?://", cleaned) else path
+    else:
         return "Por segurança não abro esse tipo de arquivo."
-    path = Path(os.path.expandvars(os.path.expanduser(target)))
-    resolved = path if path.exists() else _find_shortcut(target)
     try:
-        os.startfile(str(resolved or target))
+        os.startfile(str(resolved))
     except OSError:
-        return f"Não encontrei {target}."
-    return f"Abri {resolved.stem if resolved else target}."
+        return f"Não encontrei {cleaned}."
+    return f"Abri {resolved.stem if isinstance(resolved, Path) else cleaned}."
 
 
 def run_elevated(command: str) -> str:

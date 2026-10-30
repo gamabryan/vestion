@@ -35,6 +35,7 @@ class LiaApp:
         self._jobs: queue.Queue[str] = queue.Queue()
         self._listen_lock = threading.Lock()
         self._running = True
+        self._generation = 0
         speaker.on_start = lambda: window.set_state("speaking")
         speaker.on_end = lambda: window.set_state("idle")
         threading.Thread(target=self._brain_worker, daemon=True).start()
@@ -56,6 +57,8 @@ class LiaApp:
     def quit(self) -> None:
         self._running = False
         self.bridge.cancel_all()
+        if hasattr(self.brain, "kill"):
+            self.brain.kill()  # o Claude não continua trabalhando depois de "Sair"
         self.speaker.stop()
         for hook in self.on_quit:
             try:
@@ -71,6 +74,7 @@ class LiaApp:
     def on_hotkey(self) -> None:
         self.speaker.stop()
         self.window.show()
+        self._generation += 1  # o resto da resposta anterior não deve mais ser falado
         if not self._listen_lock.acquire(timeout=1.5):
             return  # já está ouvindo
         try:
@@ -81,11 +85,16 @@ class LiaApp:
                 self._say(NO_MIC)
                 self.window.set_state("idle")
                 return
+            except Exception:
+                log.exception("falha ao ouvir")
+                self._say(friendly_error(""))
+                self.window.set_state("idle")
+                return
         finally:
             self._listen_lock.release()
         if text:
             self.window.caption(text, "user")
-        if text and self.bridge.has_pending() and self.bridge.voice_answer(text):
+        if text and self.bridge.has_pending() and self.bridge.voice_answer(text, force=True):
             self.window.set_state("thinking")
             return
         if not text:
@@ -114,21 +123,25 @@ class LiaApp:
         self.window.set_state("thinking")
         if self.brain.needs_new_session(datetime.now()):
             self.brain.new_session()
+        generation = self._generation
         buf = SentenceBuffer()
         full = ""
         for ev in self.brain.ask(text):
+            current = generation == self._generation  # atalho apertado no meio = cala o resto
             if ev.kind == "text":
                 full += ev.text
-                self.window.caption(for_speech(full), "lia")
-                for sentence in buf.feed(ev.text):
-                    self.speaker.say(for_speech(sentence))
-            elif ev.kind == "done":
-                for sentence in buf.flush():
-                    self.speaker.say(for_speech(sentence))
-            elif ev.kind == "error":
-                for sentence in buf.flush():
-                    self.speaker.say(for_speech(sentence))
-                self._say(friendly_error(ev.text))
+                sentences = buf.feed(ev.text)
+                if current:
+                    self.window.caption(for_speech(full), "lia")
+                    for sentence in sentences:
+                        self.speaker.say(for_speech(sentence))
+            elif ev.kind in ("done", "error"):
+                sentences = buf.flush()
+                if current:
+                    for sentence in sentences:
+                        self.speaker.say(for_speech(sentence))
+                    if ev.kind == "error":
+                        self._say(friendly_error(ev.text))
         if not self.speaker.speaking:
             self.window.set_state("idle")
 
@@ -200,6 +213,7 @@ def main() -> None:
     mcp_cfg = write_mcp_config(cfg.workspace / ".lia" / "mcp.json", port, token)
     window = CentralWindow(on_confirm=bridge.resolve)
     brain = Brain(cfg, mcp_cfg, lambda: holder["app"].on_api_key_removed(), ALLOWED_TOOLS)
+    brain.is_waiting_user = bridge.has_pending
     app = LiaApp(cfg, brain, Listener(cfg), Speaker(cfg), window, bridge)
     holder["app"] = app
 

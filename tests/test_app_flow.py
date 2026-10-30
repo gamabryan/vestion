@@ -200,3 +200,62 @@ def test_api_key_warning_caption(monkeypatch):
     assert "ANTHROPIC_API_KEY" not in os.environ
     assert ("lia", API_KEY_WARNING) in app.window.captions
     assert "Oi, estou pronta." in app.speaker.said
+
+
+# 6. Atalho no meio da resposta: frases antigas não são mais faladas
+def test_hotkey_drops_rest_of_previous_answer():
+    gate = threading.Event()
+
+    class SlowBrain(FakeBrain):
+        def ask(self, text):
+            self.calls.append(text)
+            if text == "primeiro":
+                yield BrainEvent("text", "Frase um. ")
+                gate.wait(3)
+                yield BrainEvent("text", "Frase velha. ")
+                yield BrainEvent("done")
+            else:
+                yield BrainEvent("text", "Resposta nova. ")
+                yield BrainEvent("done")
+
+    app = make_app(["primeiro", "segundo"], SlowBrain())
+    app.on_hotkey()
+    assert wait_until(lambda: "Frase um." in app.speaker.said)
+    threading.Thread(target=lambda: (time.sleep(0.2), gate.set())).start()
+    app.on_hotkey()
+    assert app.wait_jobs()
+    assert "Frase velha." not in app.speaker.said
+    assert "Resposta nova." in app.speaker.said
+
+
+# Promovido: "pode" pelo atalho enquanto o cartão ainda é lido
+def test_hotkey_answer_counts_even_before_voice_window():
+    app = make_app([])
+    app.speaker.wait_idle = lambda timeout=120: time.sleep(5)  # ainda lendo o cartão
+    result = []
+    t = threading.Thread(target=lambda: result.append(app.bridge.request(ActionCard("T", "D", "T. Posso?"))))
+    t.start()
+    assert wait_until(lambda: app.window.confirms)
+    app.listener.answers = ["pode"]
+    app.on_hotkey()
+    t.join(3)
+    assert result == [True]
+    assert app.brain.calls == []
+
+
+# Promovido: erro inesperado ao ouvir não deixa a central travada em "ouvindo"
+def test_unexpected_listen_error_resets_state():
+    app = make_app([RuntimeError("falha ao baixar modelo")])
+    app.on_hotkey()
+    assert app.window.states[-1] == "idle"
+    assert app.speaker.said[-1] == "Tive um problema e não consegui fazer isso."
+
+
+# 8. Sair encerra o Claude em andamento
+def test_quit_kills_brain():
+    brain = FakeBrain()
+    killed = []
+    brain.kill = lambda: killed.append(True)
+    app = make_app([], brain)
+    app.quit()
+    assert killed == [True]

@@ -72,10 +72,11 @@ class ConfirmBridge:
         with self._lock:
             return bool(self._pending)
 
-    def voice_answer(self, text: str) -> bool:
+    def voice_answer(self, text: str, force: bool = False) -> bool:
+        """Responde pela voz. `force` = o usuário apertou o atalho de propósito para responder."""
         now = time.monotonic()
         with self._lock:
-            open_ids = [rid for rid, p in self._pending.items() if p.voice_deadline > now]
+            open_ids = [rid for rid, p in self._pending.items() if force or p.voice_deadline > now]
         if not open_ids:
             return False
         self.resolve(open_ids[0], parse_voice_approval(text))

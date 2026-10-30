@@ -9,7 +9,7 @@ import urllib.request
 
 from mcp.server.mcpserver import MCPServer
 
-from lia.permissions import is_safe_to_open, open_target, run_elevated
+from lia.permissions import open_target, run_elevated
 
 DENY_MESSAGE = "O usuário não autorizou."
 BRIDGE_WAIT_S = 90  # maior que o tempo do cartão (60 s) para o app decidir primeiro
@@ -43,9 +43,10 @@ def lia_confirmar(tool_name: str, input: dict) -> str:
 
 @server.tool()
 def lia_abrir(alvo: str) -> str:
-    """Abre um programa (pelo nome), uma pasta ou um arquivo para o usuário ver."""
-    if not is_safe_to_open(alvo):
-        return "Por segurança não abro esse tipo de arquivo."
+    """Abre um programa do menu Iniciar (pelo nome), uma pasta, um site ou um documento para o usuário ver.
+
+    Scripts e executáveis não abrem por aqui: use um comando, que passa pela confirmação.
+    """
     return open_target(alvo)
 
 
