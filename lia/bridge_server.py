@@ -1,11 +1,14 @@
 """Servidor HTTP local (127.0.0.1) que recebe pedidos de confirmação do servidor MCP da Lia."""
 import json
+import logging
 import secrets
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from lia.confirm import ConfirmBridge
-from lia.permissions import describe_action
+from lia.permissions import describe_action, needs_confirmation
+
+log = logging.getLogger(__name__)
 
 
 def start_bridge(bridge: ConfirmBridge) -> tuple[int, str]:
@@ -20,11 +23,17 @@ def start_bridge(bridge: ConfirmBridge) -> tuple[int, str]:
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 body = json.loads(self.rfile.read(length))
-                card = describe_action(str(body["tool_name"]), dict(body.get("input") or {}))
+                tool_name, tool_input = str(body["tool_name"]), dict(body.get("input") or {})
+                card = describe_action(tool_name, tool_input)
             except (ValueError, KeyError, TypeError):
                 self.send_error(400)
                 return
-            approved = bridge.request(card)
+            if needs_confirmation(tool_name, tool_input):
+                approved = bridge.request(card)
+                log.info("confirmação %s: %s %s", "APROVADA" if approved else "RECUSADA", card.title, card.detail[:200])
+            else:
+                approved = True
+                log.info("automático: %s %s", card.title, card.detail[:200])
             payload = json.dumps({"approved": approved}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

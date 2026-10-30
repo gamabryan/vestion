@@ -107,5 +107,20 @@ def test_http_roundtrip():
     bridge, shown = make_bridge()
     port, token = start_bridge(bridge)
     threading.Thread(target=lambda: bridge.resolve(wait_shown(shown), True)).start()
+    assert _post(port, token, {"tool_name": "Bash", "input": {"command": "del a.txt"}}) == {"approved": True}
+    assert shown[0][1].title == "Executar comando"
+
+
+def test_http_safe_action_approved_without_card():
+    bridge, shown = make_bridge()
+    port, token = start_bridge(bridge)
     assert _post(port, token, {"tool_name": "Bash", "input": {"command": "dir"}}) == {"approved": True}
+    assert shown == []
+
+
+def test_http_important_action_shows_card():
+    bridge, shown = make_bridge()
+    port, token = start_bridge(bridge)
+    threading.Thread(target=lambda: bridge.resolve(wait_shown(shown), False)).start()
+    assert _post(port, token, {"tool_name": "Bash", "input": {"command": "Remove-Item a.txt"}}) == {"approved": False}
     assert shown[0][1].title == "Executar comando"

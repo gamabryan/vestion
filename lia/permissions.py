@@ -23,6 +23,55 @@ START_MENUS = [
 CREATE_NO_WINDOW = 0x08000000
 
 
+# ---- Política: só o importante pede o cartão (decisão do usuário) ----------------------
+# Pede: apagar, sobrescrever, enviar, instalar/desinstalar, administrador e configurações do
+# Windows, dinheiro, contas e senhas. O resto (criar, editar, mover, organizar, abrir,
+# comandos do dia a dia) roda direto. Comandos que escondem outro comando também pedem.
+AUTO_TOOLS = {"Read", "Glob", "Grep", "LS", "Edit", "MultiEdit", "NotebookEdit", "TodoWrite",
+              "WebFetch", "WebSearch", "mcp__lia__lia_abrir"}
+
+_RISKY = [
+    # apagar / destruir
+    r"\b(rm|rmdir|rd|del|erase|Remove-Item|ri|Clear-Content|Clear-RecycleBin|shred|Format-Volume|diskpart)\b",
+    r"\bformat\s+[a-z]:", r"\bcipher\s+/w",
+    r"\bgit\s+(reset\s+--hard|clean|push\s+.*--force)",
+    # sobrescrever
+    r"(?<![\d>&])>(?![>&])(?!\s*(\$null|nul|/dev/null)\b)", r"\b(Set-Content|Out-File|sc)\b(?!.*-Append)",
+    # instalar / desinstalar
+    r"\b(winget|choco|scoop|msiexec|Install-Package|Install-Module|Add-AppxPackage|Remove-AppxPackage)\b",
+    r"\bUninstall-\w+", r"\b(pip|pip3|npm|yarn|pnpm)\s+(install|uninstall|i|add|remove)\b", r"\.msi\b",
+    # administrador / configurações do Windows
+    r"\breg(\.exe)?\s+(add|delete|import|load)\b", r"\b(Set|New|Remove)-ItemProperty\b",
+    r"\b(Set-ExecutionPolicy|bcdedit|netsh|icacls|takeown|schtasks|Register-ScheduledTask)\b",
+    r"\bsc(\.exe)?\s+(config|delete|stop|create)\b", r"\b(Stop|Set|New)-Service\b",
+    r"\b(Set|New|Remove)-NetFirewall\w*", r"\b(shutdown|Stop-Computer|Restart-Computer)\b",
+    r"\bnet\s+(user|localgroup|share)\b", r"\b(Set|Add)-MpPreference\b", r"\b(Enable|Disable)-WindowsOptionalFeature\b",
+    # enviar / rede com efeito
+    r"\bSend-MailMessage\b", r"\bgit\s+push\b", r"\bgh\s+\w+\s+(create|merge|delete)\b",
+    r"\b(curl|wget)\b.*(-X\s*(POST|PUT|DELETE|PATCH)|--data|\s-d\s|-F\s|--upload)",
+    r"\b(Invoke-WebRequest|Invoke-RestMethod|iwr|irm)\b.*-Method\s+(Post|Put|Delete|Patch)",
+    # contas, senhas e dinheiro
+    r"\b(cmdkey|Get-Credential|ConvertTo-SecureString|vaultcmd)\b", r"(?i)\b(password|senha|passwd)\b",
+    # comandos que escondem outros comandos (podem fazer qualquer coisa acima)
+    r"\b(iex|Invoke-Expression|Invoke-Command|Start-Process|saps|wscript|cscript|mshta|rundll32|regsvr32|certutil|bitsadmin)\b",
+    r"\b(powershell|pwsh)(\.exe)?\b", r"\bcmd(\.exe)?\s+/[ck]\b", r"\b(bash|sh|zsh)\s+-c\b",
+    r"\b(python3?|py|node|ruby|perl)(\.exe)?\s+(-c|-e)\b", r"\.(ps1|bat|cmd|vbs|vbe|js|wsf|hta|reg)\b",
+    r"\b(curl|wget|iwr|Invoke-WebRequest)\b.*(\||-OutFile|\s-o\s)",
+]
+_RISKY_RE = [re.compile(p, re.IGNORECASE) for p in _RISKY]
+
+
+def needs_confirmation(tool_name: str, tool_input: dict) -> bool:
+    if tool_name in AUTO_TOOLS:
+        return False
+    if tool_name == "Write":
+        return Path(str(tool_input.get("file_path", ""))).exists()
+    if tool_name in ("Bash", "PowerShell"):
+        cmd = str(tool_input.get("command", ""))
+        return any(r.search(cmd) for r in _RISKY_RE)
+    return True  # administrador, envios e qualquer ferramenta desconhecida
+
+
 @dataclass
 class ActionCard:
     title: str
@@ -41,7 +90,8 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
         cmd = tool_input.get("command", "")
         title, detail, said = "Executar comando", cmd, _short(cmd, 8)
     elif tool_name == "Write":
-        title, detail, said = "Criar ou substituir arquivo", path, Path(path).name
+        title = "Substituir arquivo existente" if path and Path(path).exists() else "Criar ou substituir arquivo"
+        detail, said = path, Path(path).name
     elif tool_name in ("Edit", "MultiEdit"):
         title, detail, said = "Alterar arquivo", path, Path(path).name
     elif tool_name == "mcp__lia__lia_admin":
