@@ -90,3 +90,14 @@ def test_draft_returns_id():
     c, calls = client()
     assert c.draft("ana@x.com", "Oi", "texto") == "rascunho1"
     assert "raw" in [x for x in calls if x[0] == "users.drafts.create"][0][1]["body"]["message"]
+
+
+def test_today_searches_inbox_since_local_midnight():
+    from datetime import datetime
+    c, calls = client()
+    now = datetime(2026, 10, 29, 15, 0).astimezone()
+    items = c.today(now, 6)
+    midnight = int(now.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+    assert calls[0][1]["q"] == f"in:inbox after:{midnight}"
+    assert calls[0][1]["maxResults"] == 6
+    assert items[0]["de"] == "Ana Souza"

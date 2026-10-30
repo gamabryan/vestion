@@ -93,25 +93,50 @@ def test_updater_keeps_last_data_on_error_and_logs_once(caplog):
     assert len([r for r in caplog.records if "painéis" in r.getMessage()]) == 2  # nova sequência de falhas
 
 
-def test_briefing_morning_two_events_one_important_mail():
+def test_briefing_lists_each_event_with_time():
     now = datetime(2026, 10, 29, 8, 30, tzinfo=LOCAL)
-    text = briefing_text(now, [event("Dentista", 10), event("Reunião Carlos", 15)],
-                         [mail("Ana", "Oi", True), mail("Banco", "Fatura")])
-    assert text == ("Bom dia. Hoje você tem 2 compromissos; o próximo é Dentista às dez da manhã. "
-                    "Você tem 1 e-mail importante não lido.")
+    text = briefing_text(now, [event("Feriado"), event("Dentista", 10), event("Reunião Carlos", 15, 30)], [])
+    assert text == ("Bom dia. Hoje você tem 3 compromissos: Feriado, o dia todo; Dentista às dez da manhã; "
+                    "e Reunião Carlos às três e meia da tarde. Nenhum e-mail chegou hoje.")
 
 
-def test_briefing_next_event_skips_past_ones_and_singular():
+def test_briefing_single_event():
     now = datetime(2026, 10, 29, 14, 0, tzinfo=LOCAL)
-    text = briefing_text(now, [event("Reunião Carlos", 15, 30)], [])
-    assert text == "Boa tarde. Hoje você tem 1 compromisso; o próximo é Reunião Carlos às três e meia da tarde."
+    text = briefing_text(now, [event("Reunião Carlos", 15)], [])
+    assert text.startswith("Boa tarde. Hoje você tem 1 compromisso: Reunião Carlos às três da tarde.")
+
+
+def test_briefing_summarizes_todays_emails():
+    now = datetime(2026, 10, 29, 9, 0, tzinfo=LOCAL)
+    mails = [mail("Ana Souza", "Proposta revisada", True), mail("Banco Inter", "Fatura disponível"),
+             mail("LinkedIn", "Você apareceu em 3 pesquisas")]
+    text = briefing_text(now, [], mails)
+    assert text == ("Bom dia. Sua agenda está livre hoje. Hoje chegaram 3 e-mails: Ana Souza, sobre Proposta revisada, "
+                    "que parece importante; Banco Inter, sobre Fatura disponível; e LinkedIn, sobre Você apareceu em 3 pesquisas.")
+
+
+def test_briefing_caps_long_lists():
+    now = datetime(2026, 10, 29, 9, 0, tzinfo=LOCAL)
+    events = [event(f"Evento {i}", 9 + i) for i in range(7)]
+    mails = [mail(f"Pessoa {i}", f"Assunto {i}") for i in range(9)]
+    text = briefing_text(now, events, mails)
+    assert "Evento 4" in text and "Evento 5" not in text and "e mais 2 compromissos" in text
+    assert "Pessoa 4" in text and "Pessoa 5" not in text and "e mais 4 e-mails" in text
 
 
 def test_briefing_free_day_no_mail():
     now = datetime(2026, 10, 29, 20, 0, tzinfo=LOCAL)
-    assert briefing_text(now, [], []) == "Boa noite. Sua agenda está livre hoje."
+    assert briefing_text(now, [], []) == "Boa noite. Sua agenda está livre hoje. Nenhum e-mail chegou hoje."
 
 
 def test_briefing_not_connected():
     assert briefing_text(datetime(2026, 10, 29, 9, tzinfo=LOCAL), None, None) == (
         "Oi, estou pronto. Preciso que você conecte sua conta Google para eu ver sua agenda e seus e-mails.")
+
+
+def test_briefing_one_extra_is_singular():
+    now = datetime(2026, 10, 29, 9, 0, tzinfo=LOCAL)
+    mails = [mail(f"Pessoa {i}", f"Assunto {i}") for i in range(6)]
+    events = [event(f"Evento {i}", 9 + i) for i in range(6)]
+    text = briefing_text(now, events, mails)
+    assert "e mais 1 e-mail." in text and "e mais 1 compromisso;" not in text and "mais 1 compromisso" in text

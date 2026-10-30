@@ -82,6 +82,11 @@ class GmailClient:
     def unread(self, max_results: int = 5) -> list[dict]:
         return self._summaries("is:unread in:inbox", max_results)
 
+    def today(self, now, max_results: int = 6) -> list[dict]:
+        """E-mails que chegaram na caixa de entrada desde a meia-noite local."""
+        midnight = now.astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
+        return self._summaries(f"in:inbox after:{int(midnight.timestamp())}", max_results)
+
     def unread_count(self) -> int:
         return int(self.service.users().labels().get(userId="me", id="INBOX").execute().get("messagesUnread", 0))
 

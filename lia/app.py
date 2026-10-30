@@ -275,7 +275,7 @@ def main() -> None:
             return briefing_text(datetime.now().astimezone(), None, None)
         gmail, calendar = clients
         now = datetime.now().astimezone()
-        return briefing_text(now, calendar.today(now), gmail.unread(10))
+        return briefing_text(now, calendar.today(now), gmail.today(now, 10))
 
     app.briefing = briefing
     app.taint = taint
