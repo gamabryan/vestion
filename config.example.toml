@@ -1,6 +1,6 @@
 # Copie para config.toml e ajuste o que quiser.
 hotkey = "ctrl+alt+a"
-voice = "pt-BR-FranciscaNeural"
+voice = "pt-BR-AntonioNeural"
 piper_voice = "pt_BR-faber-medium"
 whisper_model = "auto"   # auto, small, medium
 # workspace = "C:/Users/PC/Lia"

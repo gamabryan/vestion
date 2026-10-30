@@ -7,7 +7,7 @@ from pathlib import Path
 @dataclass
 class Config:
     hotkey: str = "ctrl+alt+a"  # Ctrl+Alt+Espaço é o atalho do app do Claude
-    voice: str = "pt-BR-FranciscaNeural"
+    voice: str = "pt-BR-AntonioNeural"
     piper_voice: str = "pt_BR-faber-medium"
     whisper_model: str = "auto"
     workspace: Path = field(default_factory=lambda: Path.home() / "Lia")
