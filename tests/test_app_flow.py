@@ -267,3 +267,11 @@ def test_speaker_envelope_reaches_face():
     app.window.speak = lambda env, ms: spoken.append((env, ms))
     app.speaker.on_play([0.1, 0.9], 40)
     assert spoken == [([0.1, 0.9], 40)]
+
+
+def test_start_speaks_briefing_when_connected():
+    app = make_app([])
+    app.briefing = lambda: "Bom dia. Sua agenda está livre hoje."
+    app.start(run_background=False)
+    assert app.speaker.said[-1] == "Bom dia. Sua agenda está livre hoje."
+    assert "Oi, estou pronto." not in app.speaker.said

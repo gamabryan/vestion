@@ -32,6 +32,7 @@ class LiaApp:
         self.window = window
         self.bridge = bridge
         self.on_quit: list[Callable[[], None]] = []
+        self.briefing: Callable[[], str] | None = None  # resumo do dia ao abrir (agenda + Gmail)
         self._jobs: queue.Queue[str] = queue.Queue()
         self._listen_lock = threading.Lock()
         self._running = True
@@ -53,7 +54,13 @@ class LiaApp:
                 self.listener.preload()
             threading.Thread(target=self._stats_loop, daemon=True).start()
         self.window.set_state("idle")
-        self._say(GREETING)
+        text = GREETING
+        if self.briefing:
+            try:
+                text = self.briefing()
+            except Exception:
+                log.exception("falha ao montar o resumo do dia")
+        self._say(text)
 
     def quit(self) -> None:
         self._running = False
@@ -199,11 +206,16 @@ def main() -> None:
     from lia.audio.stt import Listener
     from lia.audio.tts import Speaker
     from lia.brain import Brain
+    from lia.briefing import briefing_text
     from lia.bridge_server import start_bridge
     from lia.config import load_config
+    from lia.google.auth import connect_interactive, credentials_file, load_credentials
+    from lia.google.calendar import CalendarClient
+    from lia.google.gmail import GmailClient
     from lia.hotkey import register_hotkey
     from lia.mcp_config import write_mcp_config
-    from lia.permissions import ALLOWED_TOOLS
+    from lia.panels import PanelUpdater
+    from lia.permissions import ALLOWED_TOOLS, make_describer
     from lia.tray import start_tray
     from lia.ui_window import CentralWindow
 
@@ -217,19 +229,57 @@ def main() -> None:
     bridge = ConfirmBridge(cfg.confirm_timeout_s,
                            lambda rid, card: holder["app"].on_confirm_show(rid, card),
                            lambda rid: holder["app"].on_confirm_hide(rid))
-    port, token = start_bridge(bridge)
-    mcp_cfg = write_mcp_config(cfg.workspace / ".lia" / "mcp.json", port, token)
+    def google_clients():
+        creds = load_credentials(cfg.workspace)
+        if not creds:
+            return None
+        return GmailClient.from_credentials(creds), CalendarClient.from_credentials(creds)
+
+    def calendar_only():
+        clients = google_clients()
+        return clients[1] if clients else None
+
+    port, token = start_bridge(bridge, describe=make_describer(calendar_only))
+    mcp_cfg = write_mcp_config(cfg.workspace / ".lia" / "mcp.json", port, token, workspace=cfg.workspace)
     window = CentralWindow(on_confirm=bridge.resolve)
     brain = Brain(cfg, mcp_cfg, lambda: holder["app"].on_api_key_removed(), ALLOWED_TOOLS)
     brain.is_waiting_user = bridge.has_pending
     app = LiaApp(cfg, brain, Listener(cfg), Speaker(cfg), window, bridge)
     holder["app"] = app
 
+    panels = PanelUpdater(window, google_clients)
+
+    def briefing():
+        clients = google_clients()
+        if not clients:
+            return briefing_text(datetime.now().astimezone(), None, None)
+        gmail, calendar = clients
+        now = datetime.now().astimezone()
+        return briefing_text(now, calendar.today(now), gmail.unread(10))
+
+    app.briefing = briefing
+
+    def connect_google():
+        if not credentials_file(cfg.workspace).exists():
+            app._say("Ainda falta o arquivo de credenciais do Google. Siga o guia de conexão no README.")
+            return
+        app._say("Abri o navegador. Entre na sua conta Google e autorize o Vestion.")
+        if connect_interactive(cfg.workspace):
+            panels.refresh_once()
+            app._say("Pronto, conectei sua conta Google.")
+        else:
+            app._say("Não consegui conectar a conta Google. Tente de novo pelo ícone.")
+
     unhook = register_hotkey(cfg.hotkey, app.on_hotkey, cfg.hotkey_hold_s)
-    tray = start_tray(on_open=window.show, on_quit=app.quit)
+    tray = start_tray(on_open=window.show, on_quit=app.quit,
+                      on_connect_google=lambda: threading.Thread(target=connect_google, daemon=True).start())
     app.on_quit += [unhook, tray.stop]
 
-    webview.start(app.start)
+    def on_start():
+        panels.start()
+        app.start()
+
+    webview.start(on_start)
     os._exit(0)  # encerra threads de áudio e o hook de teclado junto com a janela
 
 

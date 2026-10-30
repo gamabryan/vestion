@@ -24,11 +24,13 @@ def save_ico(path: Path = ICON_PATH) -> Path:
     return path
 
 
-def start_tray(on_open: Callable[[], None], on_quit: Callable[[], None]) -> pystray.Icon:
-    menu = pystray.Menu(
-        pystray.MenuItem("Abrir central", lambda icon, item: on_open(), default=True),
-        pystray.MenuItem("Sair", lambda icon, item: on_quit()),
-    )
+def start_tray(on_open: Callable[[], None], on_quit: Callable[[], None],
+               on_connect_google: Callable[[], None] | None = None) -> pystray.Icon:
+    items = [pystray.MenuItem("Abrir central", lambda icon, item: on_open(), default=True)]
+    if on_connect_google:
+        items.append(pystray.MenuItem("Conectar Google", lambda icon, item: on_connect_google()))
+    items.append(pystray.MenuItem("Sair", lambda icon, item: on_quit()))
+    menu = pystray.Menu(*items)
     icon = pystray.Icon("vestion", draw_icon(), "Vestion", menu)
     icon.run_detached()
     return icon
