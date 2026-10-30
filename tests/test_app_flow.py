@@ -295,3 +295,12 @@ def test_slow_briefing_falls_back_to_greeting_fast():
     app.start(run_background=False)
     assert time.time() - start < 1.5
     assert app.speaker.said[-1] == "Oi, estou pronto."
+
+
+def test_panels_refresh_right_after_each_answer():
+    app = make_app(["marca dentista amanhã"])
+    refreshed = []
+    app.after_answer = lambda: refreshed.append(1)
+    app.on_hotkey()
+    assert app.wait_jobs()
+    assert refreshed == [1]

@@ -35,6 +35,7 @@ class LiaApp:
         self.briefing: Callable[[], str] | None = None  # resumo do dia ao abrir (agenda + Gmail)
         self.taint = None  # Taint compartilhado com a ponte (e-mails lidos neste pedido)
         self.briefing_timeout_s = 6.0
+        self.after_answer: Callable[[], None] | None = None
         self._jobs: queue.Queue[str] = queue.Queue()
         self._listen_lock = threading.Lock()
         self._running = True
@@ -171,6 +172,8 @@ class LiaApp:
                         self._say(friendly_error(ev.text))
         if not self.speaker.speaking:
             self.window.set_state("idle")
+        if self.after_answer:
+            self.after_answer()  # ex.: atualizar os painéis na hora, se ele mexeu na agenda ou no Gmail
 
     def _say(self, text: str) -> None:
         self.window.caption(text, "lia")
@@ -276,6 +279,7 @@ def main() -> None:
 
     app.briefing = briefing
     app.taint = taint
+    app.after_answer = lambda: threading.Thread(target=panels.refresh_once, daemon=True).start()
 
     def connect_google():
         if not credentials_file(cfg.workspace).exists():
