@@ -81,3 +81,12 @@ def test_get_returns_parsed_event():
     c, _ = client()
     item = c.get("e9")
     assert item["titulo"] == "Dentista" and item["dia_todo"] is False
+
+
+def test_today_skips_events_that_started_yesterday():
+    late_night = ev("n", "Jogo da NBA", {"dateTime": "2026-10-29T23:30:00-03:00"}, {"dateTime": "2026-10-30T00:30:00-03:00"})
+    morning = ev("m", "Reunião", {"dateTime": "2026-10-30T10:00:00-03:00"}, {"dateTime": "2026-10-30T11:00:00-03:00"})
+    trip = ev("t", "Viagem", {"date": "2026-10-28"}, {"date": "2026-11-02"})  # dia inteiro que cobre hoje
+    c, _ = client([late_night, morning, trip])
+    now = datetime(2026, 10, 30, 0, 8).astimezone()
+    assert [e["titulo"] for e in c.today(now)] == ["Reunião", "Viagem"]

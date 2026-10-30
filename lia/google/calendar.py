@@ -43,7 +43,10 @@ class CalendarClient:
     def today(self, now: datetime) -> list[dict]:
         now = _local(now)
         midnight = datetime.combine(now.date(), time(0, 0), tzinfo=now.tzinfo)
-        return self.events_between(midnight, midnight + timedelta(days=1))
+        events = self.events_between(midnight, midnight + timedelta(days=1))
+        # O Google devolve tudo que toca o dia, inclusive o que começou ontem e passa da meia-noite.
+        # "Hoje" = começa hoje; eventos de dia inteiro que cobrem hoje continuam.
+        return [e for e in events if e["dia_todo"] or _local(e["inicio"]) >= midnight]
 
     def get(self, event_id: str) -> dict:
         return _parse(self.service.events().get(calendarId="primary", eventId=event_id).execute())
