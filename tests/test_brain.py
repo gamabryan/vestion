@@ -55,7 +55,7 @@ def test_parse_ok_fixture_yields_text_then_done():
 
 def test_parse_usage_event():
     usage = [e for e in events("stream_ok.jsonl") if e.kind == "usage"]
-    assert usage == [BrainEvent("usage", "11")]
+    assert usage == [BrainEvent("usage", "11", 1793319000)]
 
 
 def test_parse_limit_fixture_yields_error():

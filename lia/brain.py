@@ -39,6 +39,7 @@ IDLE_TIMEOUT_S = 180  # sem nenhuma saÃ­da do Claude por esse tempo (e sem cartÃ
 class BrainEvent:
     kind: Literal["text", "done", "error", "usage", "limit", "billing"]
     text: str = ""
+    resets_at: int = 0  # usage: quando a janela de 5 h do plano renova (epoch)
 
 
 def clean_env(env: dict[str, str]) -> tuple[dict[str, str], bool]:
@@ -89,7 +90,7 @@ def parse_line(line: str) -> BrainEvent | None:
             return BrainEvent("limit")
         window = info.get("unifiedWindows", {}).get("five_hour", {})
         if "utilization" in window:
-            return BrainEvent("usage", str(round(window["utilization"] * 100)))
+            return BrainEvent("usage", str(round(window["utilization"] * 100)), int(window.get("resetsAt") or 0))
         return None
     if kind == "result":
         if data.get("is_error"):
@@ -139,7 +140,33 @@ class Brain:
         self.limit_hit = False
         self.usage_pct: int | None = None
         self.last_activity = datetime.now()
+        self._usage_resets_at = 0
+        self._load_usage()
         self.new_session()
+
+    # Uso do plano e pedidos de hoje sobrevivem a fechar e abrir o Vestion.
+    def _usage_file(self) -> Path:
+        return self.workspace / ".lia" / "usage.json"
+
+    def _load_usage(self) -> None:
+        try:
+            data = json.loads(self._usage_file().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if data.get("day") == date.today().isoformat():
+            self.requests_today = int(data.get("requests", 0))
+        if int(data.get("resets_at", 0)) > time.time():  # janela de 5 h ainda valendo
+            self.usage_pct = data.get("pct")
+            self._usage_resets_at = int(data["resets_at"])
+
+    def _save_usage(self) -> None:
+        try:
+            self._usage_file().parent.mkdir(parents=True, exist_ok=True)
+            self._usage_file().write_text(json.dumps({
+                "day": self._count_day.isoformat(), "requests": self.requests_today,
+                "pct": self.usage_pct, "resets_at": self._usage_resets_at}), encoding="utf-8")
+        except OSError:
+            pass
 
     def new_session(self) -> None:
         self.session_id = str(uuid.uuid4())
@@ -235,6 +262,7 @@ class Brain:
                         break
                     if ev.kind == "usage":
                         self.usage_pct = int(ev.text)
+                        self._usage_resets_at = ev.resets_at
                         self.limit_hit = False
                     elif ev.kind == "limit":
                         self.limit_hit = True
@@ -246,6 +274,7 @@ class Brain:
                     _kill_tree(proc)  # consumidor parou de ler (ex.: app saindo)
                 proc.wait()
                 self._proc = None
+                self._save_usage()
             if not finished:
                 err = "".join(self._stderr).strip()
                 yield BrainEvent("error", err or GENERIC_MSG)

@@ -140,3 +140,26 @@ def test_kill_stops_running_claude(tmp_path, monkeypatch):
     b.kill()
     t.join(10)
     assert not t.is_alive()
+
+
+def test_usage_and_request_count_survive_restart(tmp_path, monkeypatch):
+    b = _fake_claude(tmp_path, monkeypatch, """
+        import sys
+        sys.stdin.read()
+        print('{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","unifiedWindows":{"five_hour":{"utilization":0.42,"resetsAt":9999999999}}}}', flush=True)
+        print('{"type":"result","is_error":false,"result":"ok"}', flush=True)
+    """)
+    list(b.ask("oi"))
+    list(b.ask("oi de novo"))
+    reopened = Brain(Config(workspace=tmp_path / "ws"), Path("cfg.json"), lambda: None)
+    assert reopened.usage_pct == 42
+    assert reopened.requests_today == 2
+
+
+def test_old_usage_from_finished_window_is_dropped(tmp_path):
+    import json
+    ws = tmp_path / "ws"
+    (ws / ".lia").mkdir(parents=True)
+    (ws / ".lia" / "usage.json").write_text(json.dumps({"day": "2000-01-01", "requests": 9, "pct": 80, "resets_at": 1}), encoding="utf-8")
+    b = Brain(Config(workspace=ws), Path("cfg.json"), lambda: None)
+    assert b.usage_pct is None and b.requests_today == 0
