@@ -6,7 +6,7 @@ from pathlib import Path
 
 @dataclass
 class Config:
-    hotkey: str = "ctrl+alt+space"
+    hotkey: str = "ctrl+alt+l"  # Ctrl+Alt+Espaço é o atalho do app do Claude
     voice: str = "pt-BR-FranciscaNeural"
     piper_voice: str = "pt_BR-faber-medium"
     whisper_model: str = "auto"
