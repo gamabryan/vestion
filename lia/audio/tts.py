@@ -57,30 +57,52 @@ class Speaker:
         self.speaking = False
         self.on_start: Callable[[], None] = lambda: None
         self.on_end: Callable[[], None] = lambda: None
-        self._queue: queue.Queue[str] = queue.Queue()
+        # Duas etapas em paralelo: enquanto uma frase toca, a próxima já está sendo gerada.
+        self._text_q: queue.Queue[tuple[int, str]] = queue.Queue()
+        self._audio_q: queue.Queue[tuple[int, np.ndarray, int]] = queue.Queue()
+        self._gen = 0             # muda a cada stop(); frases de gerações antigas são descartadas
+        self._pending = 0         # frases pedidas e ainda não tocadas (ou descartadas)
+        self._lock = threading.Lock()
         self._stop = threading.Event()
         self._edge_ok = True
-        threading.Thread(target=self._worker, daemon=True).start()
+        threading.Thread(target=self._synth_worker, daemon=True).start()
+        threading.Thread(target=self._play_worker, daemon=True).start()
 
     def say(self, text: str) -> None:
         if text.strip():
-            self._queue.put(text)
+            with self._lock:
+                self._pending += 1
+                gen = self._gen
+            self._text_q.put((gen, text))
 
     def stop(self) -> None:
+        with self._lock:
+            self._gen += 1
         self._stop.set()
-        while True:
-            try:
-                self._queue.get_nowait()
-            except queue.Empty:
-                break
+        for q in (self._text_q, self._audio_q):
+            while True:
+                try:
+                    q.get_nowait()
+                except queue.Empty:
+                    break
+                self._done_one()
         sd.stop()
 
     def wait_idle(self, timeout: float = 120) -> None:
-        """Bloqueia até terminar de falar tudo o que está na fila."""
+        """Bloqueia até terminar de falar tudo o que foi pedido."""
         import time
         end = time.monotonic() + timeout
-        while (self.speaking or not self._queue.empty()) and time.monotonic() < end:
+        while (self.speaking or self._pending > 0) and time.monotonic() < end:
             time.sleep(0.05)
+
+    def _done_one(self) -> None:
+        with self._lock:
+            self._pending = max(0, self._pending - 1)
+            finished = self._pending == 0 and self.speaking
+            if finished:
+                self.speaking = False
+        if finished:
+            self.on_end()
 
     def _synth(self, text: str) -> tuple[np.ndarray, int]:
         if self._edge_ok:
@@ -99,22 +121,36 @@ class Speaker:
         if self._stop.is_set():
             sd.stop()
 
-    def _worker(self):
+    def _synth_worker(self):
         while True:
-            text = self._queue.get()
-            self._stop.clear()
-            if not self.speaking:
-                self.speaking = True
-                self.on_start()
+            gen, text = self._text_q.get()
+            if gen != self._gen:
+                self._done_one()
+                continue
             try:
                 audio, sr = self._synth(text)
-                if not self._stop.is_set():
-                    self._play(audio, sr)
             except Exception:
-                log.exception("não consegui falar")
-            if self._queue.empty() or self._stop.is_set():
-                self.speaking = False
-                self.on_end()
+                log.exception("não consegui gerar a fala")
+                self._done_one()
+                continue
+            self._audio_q.put((gen, audio, sr))
+
+    def _play_worker(self):
+        while True:
+            gen, audio, sr = self._audio_q.get()
+            if gen == self._gen:
+                self._stop.clear()
+                start = False
+                with self._lock:
+                    if not self.speaking:
+                        self.speaking = start = True
+                if start:
+                    self.on_start()
+                try:
+                    self._play(audio, sr)
+                except Exception:
+                    log.exception("não consegui tocar a fala")
+            self._done_one()
 
 
 if __name__ == "__main__":
