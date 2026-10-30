@@ -14,11 +14,16 @@ UI_DIR = Path(__file__).with_name("ui")
 class _JsApi:
     """Exposto ao JavaScript como pywebview.api."""
 
-    def __init__(self, on_confirm: Callable[[str, bool], None]):
+    def __init__(self, on_confirm: Callable[[str, bool], None], on_hide: Callable[[], None] = lambda: None):
         self._on_confirm = on_confirm
+        self._on_hide = on_hide
 
     def confirm(self, req_id: str, approved: bool) -> None:
         self._on_confirm(str(req_id), bool(approved))
+
+    def hide(self) -> None:
+        """Esc na central: esconde (o Vestion continua no ícone perto do relógio)."""
+        self._on_hide()
 
 
 class CentralWindow:
@@ -28,9 +33,9 @@ class CentralWindow:
         self._hidden = False
         self._minimized = False
         self.window = webview.create_window(
-            "Vestion", url=str(UI_DIR / "index.html"), js_api=_JsApi(on_confirm),
+            "Vestion", url=str(UI_DIR / "index.html"), js_api=_JsApi(on_confirm, on_hide=self.hide),
             width=1280, height=800, min_size=(900, 620), background_color="#03070d",
-            maximized=True)  # abre ocupando a tela toda
+            fullscreen=True)  # tela cheia total; Esc esconde, segurar Tab traz de volta
         self.window.events.loaded += self._loaded.set
         self.window.events.closing += self._on_closing
         self.window.events.minimized += self._on_minimized

@@ -28,7 +28,11 @@
   $("btn-yes").addEventListener("click", () => answer(true));
   $("btn-no").addEventListener("click", () => answer(false));
   document.addEventListener("keydown", (e) => {
-    if (!pendingId) return;
+    if (!pendingId) {
+      // Sem cartão aberto, Esc esconde a central (tela cheia); segurar Tab traz de volta.
+      if (e.key === "Escape" && window.pywebview && window.pywebview.api) window.pywebview.api.hide();
+      return;
+    }
     if (e.key === "Enter") answer(true);
     if (e.key === "Escape") answer(false);
   });

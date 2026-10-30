@@ -57,7 +57,7 @@ def test_closing_hides_and_next_show_brings_it_back():
     assert win.window.calls == ["hide", "show"]
 
 
-def test_window_opens_maximized(monkeypatch):
+def test_window_opens_fullscreen(monkeypatch):
     from lia import ui_window
 
     created = {}
@@ -78,4 +78,14 @@ def test_window_opens_maximized(monkeypatch):
 
     monkeypatch.setattr(ui_window.webview, "create_window", fake_create_window)
     CentralWindow(lambda rid, ok: None)
-    assert created.get("maximized") is True
+    assert created.get("fullscreen") is True
+
+
+def test_esc_from_page_hides_window():
+    from lia.ui_window import _JsApi
+    win = make()
+    api = _JsApi(lambda rid, ok: None, on_hide=win.hide)
+    api.hide()
+    assert win.window.calls == ["hide"]
+    win.show()
+    assert win.window.calls == ["hide", "show"]

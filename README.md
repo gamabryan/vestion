@@ -22,7 +22,8 @@ Requisito: o Claude Code instalado e logado com a sua conta (`claude` no termina
 - **Segure a tecla Tab** por meio segundo e fale. Ele para de ouvir quando você faz uma pausa.
   Um toque rápido no Tab continua funcionando normal em qualquer programa, e Alt+Tab não chama o Vestion.
 - Se apertar o atalho enquanto ele fala, ele para e escuta você.
-- Fechar a janela só esconde o Vestion; ele fica no ícone perto do relógio. Para encerrar: clique com o botão direito no ícone → **Sair**.
+- A central abre em **tela cheia**. **Esc** esconde a central (o Vestion continua no ícone perto do relógio); segurar o Tab ou **Abrir central** no ícone traz de volta.
+- Para encerrar: clique com o botão direito no ícone → **Sair**.
 
 ## Conectar Gmail e Agenda
 
