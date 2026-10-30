@@ -105,3 +105,20 @@ def test_opening_apps_and_sites_runs_directly(cmd):
 ])
 def test_start_process_that_can_do_harm_still_asks(cmd):
     assert bash(cmd)
+
+
+# O token do Google fica em <workspace>/.lia: nada chega lá sem o cartão
+@pytest.mark.parametrize("tool, inp", [
+    ("Bash", {"command": r"Get-Content C:\Users\PC\Lia\.lia\google_token.json"}),
+    ("Bash", {"command": "type C:/Users/PC/Lia/.lia/google_token.json"}),
+    ("Grep", {"pattern": "refresh_token", "path": r"C:\Users\PC\Lia\.lia"}),
+    ("Glob", {"pattern": "**/google_token.json"}),
+    ("Edit", {"file_path": r"C:\Users\PC\Lia\.lia\mcp.json"}),
+])
+def test_anything_touching_token_folder_asks(tool, inp):
+    assert needs_confirmation(tool, inp)
+
+
+def test_grep_and_glob_go_through_policy_not_cli_allowlist():
+    from lia.permissions import ALLOWED_TOOLS
+    assert "Grep" not in ALLOWED_TOOLS and "Glob" not in ALLOWED_TOOLS

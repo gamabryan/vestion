@@ -8,7 +8,7 @@ from pathlib import Path
 
 # Só leitura. Tudo que não está aqui passa pelo cartão PODE / CANCELAR.
 # Nenhum comando de shell é pré-liberado: prefixos não protegem contra redirecionamento (dir > x).
-ALLOWED_TOOLS = ["Read", "Glob", "Grep", "mcp__lia__lia_abrir"]
+ALLOWED_TOOLS = ["Read", "mcp__lia__lia_abrir"]  # Grep/Glob passam pela política (podem achar o token)
 
 # Abrir sem perguntar só vale para documentos e mídia (lista do que pode, não do que não pode).
 SAFE_TO_OPEN = {".pdf", ".txt", ".md", ".rtf", ".doc", ".docx", ".odt", ".xls", ".xlsx", ".ods", ".csv",
@@ -63,7 +63,17 @@ _RISKY = [
 _RISKY_RE = [re.compile(p, re.IGNORECASE) for p in _RISKY]
 
 
+_SECRET = re.compile(r"[\\/]\.lia([\\/]|$)|google_token|google_credentials", re.IGNORECASE)
+
+
+def _touches_secrets(tool_input: dict) -> bool:
+    """Pasta .lia (token do Google, configuração da ponte) e os arquivos de credenciais."""
+    return any(isinstance(v, str) and _SECRET.search(v) for v in tool_input.values())
+
+
 def needs_confirmation(tool_name: str, tool_input: dict) -> bool:
+    if _touches_secrets(tool_input):
+        return True
     if tool_name in AUTO_TOOLS:
         return False
     if tool_name == "Write":

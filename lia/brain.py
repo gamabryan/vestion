@@ -51,7 +51,7 @@ def fixed_drives() -> list[str]:
 
 
 def build_command(session_id: str, resume: bool, mcp_config: Path, allowed: list[str],
-                  drives: list[str], exe: str = "claude") -> list[str]:
+                  drives: list[str], exe: str = "claude", deny_read: list[str] | None = None) -> list[str]:
     cmd = [exe, "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages"]
     cmd += ["--resume", session_id] if resume else ["--session-id", session_id]
     # Só as configurações da pasta da Lia: regras, modo, hooks e env pessoais do usuário não valem aqui.
@@ -59,6 +59,8 @@ def build_command(session_id: str, resume: bool, mcp_config: Path, allowed: list
     cmd += ["--mcp-config", str(mcp_config), "--strict-mcp-config",
             "--permission-prompt-tool", "mcp__lia__lia_confirmar",
             "--allowedTools", ",".join(allowed)]
+    if deny_read:  # ex.: a pasta com o token do Google
+        cmd += ["--disallowedTools", ",".join(f"Read({p}/**)" for p in deny_read)]
     for d in drives:
         cmd += ["--add-dir", d]
     return cmd
@@ -195,7 +197,8 @@ class Brain:
             self.requests_today += 1
             self.last_activity = datetime.now()
             cmd = build_command(self.session_id, self._started, self.mcp_config, self.allowed,
-                                fixed_drives(), exe)
+                                fixed_drives(), exe,
+                                deny_read=[(self.workspace / ".lia").as_posix()])
             try:
                 proc = subprocess.Popen(cmd, cwd=self.workspace, env=env, stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,

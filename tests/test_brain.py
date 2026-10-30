@@ -93,3 +93,8 @@ def test_missing_claude_executable(tmp_path, monkeypatch):
     monkeypatch.setattr(brain.shutil, "which", lambda name: None)
     b = Brain(Config(workspace=tmp_path), Path("cfg.json"), lambda: None)
     assert list(b.ask("oi")) == [BrainEvent("error", "Não encontrei o Claude Code instalado.")]
+
+
+def test_build_command_denies_reading_token_folder():
+    cmd = build_command("abc", False, Path("cfg.json"), ["Read"], [], deny_read=["C:/Users/PC/Lia/.lia"])
+    assert cmd[cmd.index("--disallowedTools") + 1] == "Read(C:/Users/PC/Lia/.lia/**)"
