@@ -25,16 +25,27 @@ class CentralWindow:
     def __init__(self, on_confirm: Callable[[str, bool], None]):
         self._loaded = threading.Event()
         self._quitting = False
+        self._hidden = False
+        self._minimized = False
         self.window = webview.create_window(
             "Vestion", url=str(UI_DIR / "index.html"), js_api=_JsApi(on_confirm),
             width=1280, height=800, min_size=(900, 620), background_color="#03070d")
         self.window.events.loaded += self._loaded.set
         self.window.events.closing += self._on_closing
+        self.window.events.minimized += self._on_minimized
+        self.window.events.restored += self._on_restored
+        self.window.events.maximized += self._on_restored
+
+    def _on_minimized(self):
+        self._minimized = True
+
+    def _on_restored(self):
+        self._minimized = False
 
     def _on_closing(self):
         if self._quitting:
             return True
-        self.window.hide()  # fechar só esconde; "Sair" na bandeja encerra
+        self.hide()  # fechar só esconde; "Sair" na bandeja encerra
         return False
 
     def _js(self, fn: str, *args) -> None:
@@ -47,11 +58,17 @@ class CentralWindow:
             pass  # janela fechando
 
     def show(self) -> None:
-        self.window.show()
-        self.window.restore()
+        # Só mexe na janela se ela estiver escondida ou minimizada: "restore" tiraria do maximizado.
+        if self._hidden:
+            self.window.show()
+            self._hidden = False
+        if self._minimized:
+            self.window.restore()
+            self._minimized = False
 
     def hide(self) -> None:
         self.window.hide()
+        self._hidden = True
 
     def destroy(self) -> None:
         self._quitting = True
