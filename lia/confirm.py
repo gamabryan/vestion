@@ -6,6 +6,7 @@ import unicodedata
 import uuid
 from typing import Callable
 
+from lia.names import canonical_name
 from lia.permissions import ActionCard
 
 APPROVAL_PHRASES = {"pode", "pode mandar", "pode fazer", "confirma", "confirmo", "sim pode"}
@@ -19,7 +20,7 @@ def _normalize(text: str) -> str:
 
 def parse_voice_approval(text: str) -> bool:
     """Só uma frase clara de aprovação conta; qualquer outra coisa é cancelar."""
-    norm = _normalize(text)
+    norm = _normalize(canonical_name(text))
     if norm.startswith("vestion "):
         norm = norm[len("vestion "):]
     return norm in APPROVAL_PHRASES
