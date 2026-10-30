@@ -72,6 +72,9 @@ class CentralWindow:
     def update_panel(self, name: str, data: dict) -> None:
         self._js("updatePanel", name, data)
 
+    def speak(self, envelope: list[float], frame_ms: int) -> None:
+        self._js("speak", envelope, frame_ms)
+
 
 def _demo(win: CentralWindow):
     import time

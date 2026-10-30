@@ -91,3 +91,28 @@ def test_next_sentence_synthesized_while_current_plays(monkeypatch):
     first_play_end = [t for k, _, t in log if k == "play_end"][0]
     assert second_synth < first_play_end  # gerou a próxima enquanto tocava
     assert total < 1.5  # em série seriam ~1.8 s
+
+
+def test_speech_envelope_follows_volume():
+    sr = 1000
+    audio = np.concatenate([np.zeros(200), 0.5 * np.ones(200), np.zeros(100)]).astype(np.float32)
+    env = tts.speech_envelope(audio, sr, frame_ms=100)
+    assert len(env) == 5
+    assert env[0] == 0 and env[4] == 0
+    assert env[2] == 1.0 and env[3] == 1.0
+    assert all(0 <= v <= 1 for v in env)
+
+
+def test_speech_envelope_silence_is_zero():
+    assert tts.speech_envelope(np.zeros(1000, dtype=np.float32), 1000, 100) == [0.0] * 10
+
+
+def test_on_play_receives_envelope_before_playing(monkeypatch):
+    order = []
+    monkeypatch.setattr(tts, "synth_edge", lambda text, voice: (np.ones(2400, dtype=np.float32) * 0.3, 24000))
+    speaker = Speaker(Config())
+    monkeypatch.setattr(speaker, "_play", lambda audio, sr: order.append("play"))
+    speaker.on_play = lambda env, frame_ms: order.append(("env", len(env), frame_ms))
+    speaker.say("Oi.")
+    assert _wait(lambda: "play" in order)
+    assert order[0] == ("env", 3, 40)

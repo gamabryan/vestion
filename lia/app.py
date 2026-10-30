@@ -38,6 +38,7 @@ class LiaApp:
         self._generation = 0
         speaker.on_start = lambda: window.set_state("speaking")
         speaker.on_end = lambda: window.set_state("idle")
+        speaker.on_play = lambda envelope, frame_ms: window.speak(envelope, frame_ms)
         threading.Thread(target=self._brain_worker, daemon=True).start()
 
     # ---- ciclo de vida -------------------------------------------------

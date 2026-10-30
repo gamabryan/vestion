@@ -33,6 +33,22 @@ def synth_edge(text: str, voice: str) -> tuple[np.ndarray, int]:
     return np.asarray(decoded.samples, dtype=np.float32), decoded.sample_rate
 
 
+ENVELOPE_FRAME_MS = 40
+
+
+def speech_envelope(audio: np.ndarray, sr: int, frame_ms: int = ENVELOPE_FRAME_MS) -> list[float]:
+    """Volume da fala ao longo do tempo (0..1 por quadro), usado para mexer a boca do rosto 3D."""
+    frame = max(1, int(sr * frame_ms / 1000))
+    count = -(-len(audio) // frame)
+    padded = np.zeros(count * frame, dtype=np.float32)
+    padded[:len(audio)] = audio
+    rms = np.sqrt(np.mean(padded.reshape(count, frame) ** 2, axis=1))
+    peak = float(rms.max()) if count else 0.0
+    if peak < 1e-4:
+        return [0.0] * count
+    return [round(float(v), 3) for v in np.sqrt(np.clip(rms / peak, 0, 1))]
+
+
 _piper_voices: dict = {}
 
 
@@ -57,6 +73,7 @@ class Speaker:
         self.speaking = False
         self.on_start: Callable[[], None] = lambda: None
         self.on_end: Callable[[], None] = lambda: None
+        self.on_play: Callable[[list[float], int], None] = lambda envelope, frame_ms: None
         # Duas etapas em paralelo: enquanto uma frase toca, a próxima já está sendo gerada.
         self._text_q: queue.Queue[tuple[int, str]] = queue.Queue()
         self._audio_q: queue.Queue[tuple[int, np.ndarray, int]] = queue.Queue()
@@ -146,6 +163,10 @@ class Speaker:
                         self.speaking = start = True
                 if start:
                     self.on_start()
+                try:
+                    self.on_play(speech_envelope(audio, sr), ENVELOPE_FRAME_MS)
+                except Exception:
+                    log.exception("não consegui mandar o volume para o rosto")
                 try:
                     self._play(audio, sr)
                 except Exception:

@@ -5,60 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lia</title>
 <link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/" } }
+</script>
 </head>
 <body class="idle">
-  <div class="grid"></div>
-  <div class="scan"></div>
+  <div class="fallback-core" aria-hidden="true"><div class="ring"></div><div class="ring r2"></div><div class="dot"></div></div>
 
-  <header>
+  <header class="hud">
     <div class="brand">LIA <span id="state-label">· EM ESPERA</span></div>
     <div class="clock" id="clock"></div>
   </header>
 
-  <main>
-    <section class="panel" id="panel-agenda" style="grid-area:agenda">
+  <aside class="col left">
+    <section class="glass" id="panel-agenda">
       <h4>AGENDA · HOJE</h4>
       <div class="rows"><div class="soon">EM BREVE</div></div>
     </section>
-    <section class="panel" id="panel-gmail" style="grid-area:gmail">
-      <h4>GMAIL</h4>
-      <div class="rows"><div class="soon">EM BREVE</div></div>
-    </section>
-    <section class="panel" id="panel-whatsapp" style="grid-area:whats">
+    <section class="glass" id="panel-whatsapp">
       <h4>WHATSAPP</h4>
       <div class="rows"><div class="soon">EM BREVE</div></div>
     </section>
-    <section class="panel" id="panel-sistema" style="grid-area:sistema">
+  </aside>
+
+  <aside class="col right">
+    <section class="glass" id="panel-gmail">
+      <h4>GMAIL</h4>
+      <div class="rows"><div class="soon">EM BREVE</div></div>
+    </section>
+    <section class="glass" id="panel-sistema">
       <h4>SISTEMA</h4>
       <div class="rows">
-        <div>CPU <b id="cpu">–</b><div class="meter"><i id="cpu-bar"></i></div></div>
-        <div>Memória <b id="mem">–</b><div class="meter"><i id="mem-bar"></i></div></div>
-        <div>Plano Claude <b id="uso">–</b><div class="meter"><i id="uso-bar"></i></div></div>
-        <div>Pedidos hoje <b id="pedidos">0</b></div>
+        <div class="metric"><span>CPU</span><b id="cpu">–</b></div><div class="bar"><i id="cpu-bar"></i></div>
+        <div class="metric"><span>Memória</span><b id="mem">–</b></div><div class="bar"><i id="mem-bar"></i></div>
+        <div class="metric"><span>Plano Claude</span><b id="uso">–</b></div><div class="bar"><i id="uso-bar"></i></div>
+        <div class="metric"><span>Pedidos hoje</span><b id="pedidos">0</b></div>
         <div class="limit" id="limite" hidden>LIMITE ATINGIDO</div>
       </div>
     </section>
+  </aside>
 
-    <div class="core-wrap" style="grid-area:core">
-      <div class="line l1"></div><div class="line l2"></div>
-      <div class="orb">
-        <div class="ring r3"></div>
-        <div class="ring r1"></div>
-        <div class="ring r2"></div>
-        <div class="ring r4"></div>
-        <div class="core"></div>
-      </div>
-      <div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    </div>
-  </main>
-
-  <footer>
+  <footer class="caption">
     <div class="you" id="you"></div>
     <div class="lia" id="caption">Aperte o atalho e fale comigo.</div>
   </footer>
 
   <div class="confirm-overlay" id="confirm" hidden>
-    <div class="confirm-card">
+    <div class="confirm-card glass">
       <div class="confirm-tag">CONFIRMAÇÃO NECESSÁRIA</div>
       <h2 id="confirm-title"></h2>
       <pre id="confirm-detail"></pre>
@@ -71,5 +64,6 @@
   </div>
 
   <script src="app.js"></script>
+  <script type="module" src="face.js"></script>
 </body>
 </html>

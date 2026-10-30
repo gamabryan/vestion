@@ -259,3 +259,11 @@ def test_quit_kills_brain():
     app = make_app([], brain)
     app.quit()
     assert killed == [True]
+
+
+def test_speaker_envelope_reaches_face():
+    app = make_app([])
+    spoken = []
+    app.window.speak = lambda env, ms: spoken.append((env, ms))
+    app.speaker.on_play([0.1, 0.9], 40)
+    assert spoken == [([0.1, 0.9], 40)]

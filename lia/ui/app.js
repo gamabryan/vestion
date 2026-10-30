@@ -57,10 +57,20 @@
     }
   }
 
+  // Se o rosto 3D não subir (sem WebGL ou erro), mostra o núcleo simples no lugar de uma tela vazia.
+  setTimeout(() => { if (!window.liaFaceReady) document.body.classList.add("no-webgl"); }, 4000);
+
   window.lia = {
+    state: "idle",
     setState(state) {
-      document.body.className = state;
+      this.state = state;
+      document.body.classList.remove("idle", "listening", "thinking", "speaking");
+      document.body.classList.add(state);
       $("state-label").textContent = "· " + (STATE_LABELS[state] || state.toUpperCase());
+    },
+    // Volume da frase que começou a tocar agora (um valor 0..1 a cada frameMs): move a boca do rosto 3D.
+    speak(envelope, frameMs) {
+      this.envelope = { values: envelope, frameMs, start: performance.now() };
     },
     setCaption(text, who) {
       if (who === "user") {
