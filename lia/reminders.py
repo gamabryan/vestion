@@ -11,6 +11,26 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 
+_DONE = {"feito", "pronto", "ja fiz", "fiz", "concluido", "ok", "beleza", "certo", "ja foi"}
+_SNOOZE = {"adia", "adiar", "depois", "mais tarde", "daqui a pouco", "me lembra depois", "soneca"}
+
+
+def parse_reminder_answer(text: str) -> str | None:
+    """Resposta falada ao aviso: 'done' (feito), 'snooze' (adiar) ou None (outra coisa)."""
+    import re
+    import unicodedata
+    norm = unicodedata.normalize("NFKD", text.lower())
+    norm = "".join(c for c in norm if not unicodedata.combining(c))
+    norm = " ".join(re.sub(r"[^\w\s]", " ", norm).split())
+    if norm.startswith("vestion "):
+        norm = norm[len("vestion "):]
+    if norm in _DONE:
+        return "done"
+    if norm in _SNOOZE:
+        return "snooze"
+    return None
+
+
 def _when(item: dict) -> datetime | None:
     return datetime.fromisoformat(item["quando"]) if item.get("quando") else None
 

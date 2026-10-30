@@ -140,3 +140,63 @@ def test_briefing_one_extra_is_singular():
     events = [event(f"Evento {i}", 9 + i) for i in range(6)]
     text = briefing_text(now, events, mails)
     assert "e mais 1 e-mail." in text and "e mais 1 compromisso;" not in text and "mais 1 compromisso" in text
+
+
+def test_reminders_panel_order_tags_and_kinds(tmp_path):
+    from datetime import timedelta
+    from lia.panels import reminders_panel
+    from lia.reminders import ReminderStore
+    now = datetime(2026, 10, 30, 9, 0, tzinfo=LOCAL)
+    s = ReminderStore(tmp_path / "l.json")
+    s.add("tarefa solta")
+    s.add("amanhã", now + timedelta(days=1, hours=1))
+    s.add("hoje", now + timedelta(hours=5))
+    s.add("atrasado", now - timedelta(hours=2))
+    panel = reminders_panel(s.groups(now), now)
+    assert panel["title"] == "LEMBRETES · 4"
+    assert [(i["text"], i["tag"], i["kind"]) for i in panel["items"]] == [
+        ("atrasado", "07:00", "late"), ("hoje", "14:00", "today"),
+        ("amanhã", "31/10 10:00", "next"), ("tarefa solta", "", "task")]
+    assert all(i["id"] for i in panel["items"])
+
+
+def test_updater_shows_reminders_even_without_google(tmp_path):
+    from lia.reminders import ReminderStore
+    s = ReminderStore(tmp_path / "l.json")
+    s.add("comprar ração")
+    win = FakeWindow()
+    PanelUpdater(win, lambda: None, reminders=s).refresh_once()
+    assert win.panels["lembretes"]["items"][0]["text"] == "comprar ração"
+
+
+def test_briefing_includes_todays_and_late_reminders(tmp_path):
+    from datetime import timedelta
+    from lia.reminders import ReminderStore
+    now = datetime(2026, 10, 30, 9, 0, tzinfo=LOCAL)
+    s = ReminderStore(tmp_path / "l.json")
+    s.add("pagar a conta", now.replace(hour=10))
+    s.add("ligar para o Pedro", now.replace(hour=15))
+    s.add("renovar a CNH", now - timedelta(days=1))
+    s.add("comprar ração")  # sem hora: fica só no painel
+    s.add("dentista", now + timedelta(days=2))
+    text = briefing_text(now, [], [], s.groups(now))
+    assert text.endswith("Você tem 2 lembretes hoje: pagar a conta às dez da manhã; e ligar para o Pedro às três da tarde. "
+                         "1 está atrasado: renovar a CNH.")
+    assert "ração" not in text and "dentista" not in text
+
+
+def test_briefing_without_reminders_says_nothing_about_them(tmp_path):
+    from lia.reminders import ReminderStore
+    now = datetime(2026, 10, 30, 9, 0, tzinfo=LOCAL)
+    text = briefing_text(now, [], [], ReminderStore(tmp_path / "l.json").groups(now))
+    assert "lembrete" not in text.lower()
+
+
+def test_briefing_reminders_even_when_google_not_connected(tmp_path):
+    from lia.reminders import ReminderStore
+    now = datetime(2026, 10, 30, 9, 0, tzinfo=LOCAL)
+    s = ReminderStore(tmp_path / "l.json")
+    s.add("pagar a conta", now.replace(hour=10))
+    text = briefing_text(now, None, None, s.groups(now))
+    assert text.startswith("Oi, estou pronto. Preciso que você conecte")
+    assert text.endswith("Você tem 1 lembrete hoje: pagar a conta às dez da manhã.")

@@ -46,11 +46,23 @@
     const rows = document.querySelector(`#panel-${name} .rows`);
     rows.innerHTML = "";
     if (!items || !items.length) {
-      rows.innerHTML = '<div class="soon">NADA NOVO</div>';
+      rows.innerHTML = `<div class="soon">${name === "lembretes" ? "NADA PENDENTE" : "NADA NOVO"}</div>`;
       return;
     }
     for (const item of items) {
       const div = document.createElement("div");
+      if (item.kind) div.className = `reminder ${item.kind}`;
+      if (name === "lembretes" && item.id) {
+        // caixinha de "feito"
+        const box = document.createElement("button");
+        box.className = "check";
+        box.title = "Marcar como feito";
+        box.addEventListener("click", () => {
+          div.classList.add("done");
+          if (window.pywebview && window.pywebview.api) window.pywebview.api.reminder_done(item.id);
+        });
+        div.appendChild(box);
+      }
       if (item.tag) {
         const em = document.createElement("em");
         em.textContent = item.tag + " ";
@@ -60,6 +72,29 @@
       rows.appendChild(div);
     }
   }
+
+  // Formulário "+ novo lembrete"
+  $("reminder-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = $("reminder-text").value.trim();
+    if (!text) return;
+    if (window.pywebview && window.pywebview.api) window.pywebview.api.reminder_add(text, $("reminder-when").value);
+    $("reminder-text").value = "";
+    $("reminder-when").value = "";
+  });
+
+  // Aviso na hora do lembrete
+  let reminderId = null;
+  function answerReminder(done) {
+    if (!reminderId) return;
+    const id = reminderId;
+    window.lia.hideReminder(id);
+    if (window.pywebview && window.pywebview.api) {
+      if (done) window.pywebview.api.reminder_done(id); else window.pywebview.api.reminder_snooze(id);
+    }
+  }
+  $("btn-reminder-done").addEventListener("click", () => answerReminder(true));
+  $("btn-reminder-snooze").addEventListener("click", () => answerReminder(false));
 
   // Se o rosto 3D não subir (sem WebGL ou erro), mostra o núcleo simples no lugar de uma tela vazia.
   setTimeout(() => { if (!window.liaFaceReady) document.body.classList.add("no-webgl"); }, 4000);
@@ -94,6 +129,16 @@
       if (id && id !== pendingId) return;
       pendingId = null;
       $("confirm").hidden = true;
+    },
+    showReminder(id, text) {
+      reminderId = id;
+      $("reminder-alert-text").textContent = text;
+      $("reminder-alert").hidden = false;
+    },
+    hideReminder(id) {
+      if (id && id !== reminderId) return;
+      reminderId = null;
+      $("reminder-alert").hidden = true;
     },
     updatePanel(name, data) {
       if (name === "sistema") {

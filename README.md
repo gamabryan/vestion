@@ -29,6 +29,14 @@ Requisito: o Claude Code instalado e logado com a sua conta (`claude` no termina
 
 Siga o guia [docs/conectar-google.md](docs/conectar-google.md) (uma vez só, gratuito). Depois, no ícone perto do relógio, use **Conectar Google**. Os painéis de Agenda e Gmail passam a mostrar seus dados, e ao abrir o Vestion dá um resumo do dia.
 
+## Lembretes
+
+- Pela voz: "Vestion, me lembra de pagar a conta amanhã às dez", "anota: comprar ração", "o que eu tenho para lembrar?", "marca a conta como feita".
+- No painel **LEMBRETES**: digite em **+ novo lembrete**, escolha data e hora se quiser, e clique em **+**. A caixinha ao lado de cada um marca como feito.
+- Na hora marcada, a central aparece, ele fala o lembrete e mostra **Feito** / **Adiar 10 min** (ou responda falando "feito" / "adia"). Só funciona com o Vestion aberto; se ele estava fechado, o lembrete aparece como atrasado.
+- Ao abrir, o resumo do dia inclui os lembretes de hoje e os atrasados.
+- Ficam só no PC, em `C:\Users\<você>\Lia\lembretes.json`.
+
 ## Confirmações
 
 Tudo que altera o computador (criar, mover, apagar arquivos, instalar, comandos) mostra o cartão **PODE / CANCELAR**.

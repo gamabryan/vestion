@@ -13,6 +13,7 @@ from lia.brain import BILLING_KEYS, friendly_error
 from lia.config import Config
 from lia.confirm import ConfirmBridge
 from lia.permissions import ActionCard
+from lia.reminders import parse_reminder_answer
 from lia.sentences import SentenceBuffer, for_speech
 from lia.system_stats import snapshot
 
@@ -36,6 +37,9 @@ class LiaApp:
         self.taint = None  # Taint compartilhado com a ponte (e-mails lidos neste pedido)
         self.briefing_timeout_s = 6.0
         self.after_answer: Callable[[], None] | None = None
+        self.reminders = None              # ReminderStore (lembretes só no PC)
+        self.on_reminders_changed: Callable[[], None] = lambda: None  # ex.: atualizar o painel
+        self._open_reminder: str | None = None
         self._jobs: queue.Queue[str] = queue.Queue()
         self._listen_lock = threading.Lock()
         self._running = True
@@ -56,6 +60,8 @@ class LiaApp:
             if hasattr(self.listener, "preload"):
                 self.listener.preload()
             threading.Thread(target=self._stats_loop, daemon=True).start()
+            if self.reminders is not None:
+                threading.Thread(target=self._reminder_loop, daemon=True).start()
         self.window.set_state("idle")
         self._say(self._briefing_or_greeting())
 
@@ -120,6 +126,8 @@ class LiaApp:
             self._listen_lock.release()
         if text:
             self.window.caption(text, "user")
+        if text and self._open_reminder and self._answer_reminder_by_voice(text):
+            return
         if text and self.bridge.has_pending() and self.bridge.voice_answer(text, force=True):
             self.window.set_state("thinking")
             return
@@ -210,6 +218,82 @@ class LiaApp:
         self.window.hide_confirm(req_id)
         self.listener.muted = False
 
+    # ---- lembretes -----------------------------------------------------
+    def check_reminders(self) -> None:
+        """Chamado pelo vigia: avisa (uma vez) o primeiro lembrete que chegou na hora."""
+        if self.reminders is None or self._open_reminder:
+            return
+        due = self.reminders.due(datetime.now().astimezone())
+        if not due:
+            return
+        item = due[0]
+        self.reminders.mark_warned(item["id"])
+        self._open_reminder = item["id"]
+        self.window.show()
+        self.window.show_reminder(item["id"], item["texto"])
+        self._say(f"Lembrete: {item['texto']}.")
+        threading.Thread(target=self._listen_reminder_answer, args=(item["id"],), daemon=True).start()
+
+    def _listen_reminder_answer(self, rid: str) -> None:
+        """Depois de falar o lembrete, escuta uma vez por 'feito' ou 'adia' (como no cartão)."""
+        time.sleep(0.1)
+        self.speaker.wait_idle()
+        if self._open_reminder != rid or not self._listen_lock.acquire(timeout=0.5):
+            return
+        try:
+            self.window.set_state("listening")
+            try:
+                text = self.listener.listen_once(max_seconds=self.cfg.voice_confirm_window_s)
+            except Exception:
+                text = ""
+        finally:
+            self._listen_lock.release()
+        self.window.set_state("idle")
+        if text:
+            self._answer_reminder_by_voice(text)
+
+    def _answer_reminder_by_voice(self, text: str) -> bool:
+        answer = parse_reminder_answer(text)
+        rid = self._open_reminder
+        if not answer or not rid:
+            return False
+        if answer == "done":
+            self.complete_reminder(rid)
+            self._say("Marquei como feito.")
+        else:
+            self.snooze_reminder(rid)
+            self._say("Certo, te lembro de novo em dez minutos.")
+        return True
+
+    def complete_reminder(self, rid: str) -> None:
+        self.reminders.complete(rid)
+        self._close_reminder(rid)
+
+    def snooze_reminder(self, rid: str) -> None:
+        self.reminders.snooze(rid, 10, datetime.now().astimezone())
+        self._close_reminder(rid)
+
+    def _close_reminder(self, rid: str) -> None:
+        if self._open_reminder == rid:
+            self._open_reminder = None
+            self.window.hide_reminder(rid)
+        self.on_reminders_changed()
+
+    def add_reminder(self, texto: str, quando: str) -> None:
+        """Do formulário do painel: 'quando' no formato do campo de data/hora (hora local) ou vazio."""
+        when = datetime.fromisoformat(quando).astimezone() if quando else None
+        self.reminders.add(texto, when)
+        self.on_reminders_changed()
+
+    def _reminder_loop(self) -> None:
+        while self._running:
+            try:
+                self.check_reminders()
+                self.on_reminders_changed()  # atrasados mudam de cor com o tempo
+            except Exception:
+                log.exception("falha no vigia de lembretes")
+            time.sleep(15)
+
     # ---- painéis -------------------------------------------------------
     def _stats_loop(self) -> None:
         while self._running:
@@ -234,6 +318,7 @@ def main() -> None:
     from lia.mcp_config import write_mcp_config
     from lia.panels import PanelUpdater
     from lia.permissions import ALLOWED_TOOLS, Taint, make_describer, make_policy
+    from lia.reminders import ReminderStore
     from lia.tray import start_tray
     from lia.ui_window import CentralWindow
 
@@ -257,8 +342,9 @@ def main() -> None:
         clients = google_clients()
         return clients[1] if clients else None
 
+    reminders = ReminderStore(cfg.workspace / "lembretes.json")
     taint = Taint()
-    port, token = start_bridge(bridge, describe=make_describer(calendar_only), taint=taint,
+    port, token = start_bridge(bridge, describe=make_describer(calendar_only, reminders=reminders), taint=taint,
                                policy=make_policy(calendar_only))
     mcp_cfg = write_mcp_config(cfg.workspace / ".lia" / "mcp.json", port, token, workspace=cfg.workspace)
     window = CentralWindow(on_confirm=bridge.resolve)
@@ -267,15 +353,21 @@ def main() -> None:
     app = LiaApp(cfg, brain, Listener(cfg), Speaker(cfg), window, bridge)
     holder["app"] = app
 
-    panels = PanelUpdater(window, google_clients)
+    panels = PanelUpdater(window, google_clients, reminders=reminders)
+    app.reminders = reminders
+    app.on_reminders_changed = panels.refresh_reminders
+    window.on_reminder_add = app.add_reminder
+    window.on_reminder_done = app.complete_reminder
+    window.on_reminder_snooze = app.snooze_reminder
 
     def briefing():
+        now = datetime.now().astimezone()
+        groups = reminders.groups(now)
         clients = google_clients()
         if not clients:
-            return briefing_text(datetime.now().astimezone(), None, None)
+            return briefing_text(now, None, None, groups)
         gmail, calendar = clients
-        now = datetime.now().astimezone()
-        return briefing_text(now, calendar.today(now), gmail.today(now, 10))
+        return briefing_text(now, calendar.today(now), gmail.today(now, 10), groups)
 
     app.briefing = briefing
     app.taint = taint

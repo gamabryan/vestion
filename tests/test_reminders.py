@@ -83,3 +83,15 @@ def test_corrupted_file_starts_empty_and_keeps_backup(tmp_path):
     assert s.all() == []
     s.add("novo")
     assert (tmp_path / "lembretes.json.bak").exists()
+
+
+import pytest
+
+from lia.reminders import parse_reminder_answer
+
+
+@pytest.mark.parametrize("text, answer", [("Feito!", "done"), ("pronto", "done"), ("já fiz", "done"), ("Vestion, feito.", "done"),
+                                          ("adia", "snooze"), ("Adiar", "snooze"), ("depois", "snooze"), ("mais tarde", "snooze"),
+                                          ("que horas são?", None), ("", None)])
+def test_parse_reminder_answer(text, answer):
+    assert parse_reminder_answer(text) == answer

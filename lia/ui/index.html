@@ -22,9 +22,16 @@
       <h4>AGENDA · HOJE</h4>
       <div class="rows"><div class="soon">EM BREVE</div></div>
     </section>
-    <section class="glass" id="panel-whatsapp">
-      <h4>WHATSAPP</h4>
-      <div class="rows"><div class="soon">EM BREVE</div></div>
+    <section class="glass" id="panel-lembretes">
+      <h4>LEMBRETES</h4>
+      <div class="rows"><div class="soon">NADA PENDENTE</div></div>
+      <form class="reminder-form" id="reminder-form" autocomplete="off">
+        <input id="reminder-text" type="text" placeholder="+ novo lembrete" maxlength="140">
+        <div class="reminder-form-row">
+          <input id="reminder-when" type="datetime-local" title="Data e hora (opcional)">
+          <button type="submit" title="Adicionar">+</button>
+        </div>
+      </form>
     </section>
   </aside>
 
@@ -59,6 +66,18 @@
       <div class="confirm-buttons">
         <button class="yes" id="btn-yes">PODE</button>
         <button class="no" id="btn-no">CANCELAR</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay" id="reminder-alert" hidden>
+    <div class="confirm-card glass reminder-card">
+      <div class="confirm-tag reminder-tag">LEMBRETE</div>
+      <h2 id="reminder-alert-text"></h2>
+      <div class="confirm-hint">Clique, ou diga “feito” ou “adia”.</div>
+      <div class="confirm-buttons">
+        <button class="yes" id="btn-reminder-done">FEITO</button>
+        <button class="snooze" id="btn-reminder-snooze">ADIAR 10 MIN</button>
       </div>
     </div>
   </div>

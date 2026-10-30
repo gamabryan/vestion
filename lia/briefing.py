@@ -53,8 +53,30 @@ def _mails_sentence(mails: list[dict]) -> str:
     return f"Hoje chegaram {n} e-mail{'s' if n > 1 else ''}: {_join(parts, rest, 'e-mails')}."
 
 
-def briefing_text(now: datetime, events: list[dict] | None, mails: list[dict] | None) -> str:
-    """Saudação, compromissos de hoje (com horário) e os e-mails que chegaram hoje (quem e sobre o quê)."""
+def _reminders_sentence(groups: dict[str, list[dict]] | None) -> str:
+    """Lembretes de hoje (com hora) e atrasados. Os sem hora ficam só no painel."""
+    if not groups:
+        return ""
+    parts = []
+    today = groups.get("hoje", [])
+    if today:
+        n = len(today)
+        items = [f"{r['texto']} {spoken_time(datetime.fromisoformat(r['quando']).astimezone())}" for r in today[:MAX_EVENTS]]
+        parts.append(f"Você tem {n} lembrete{'s' if n > 1 else ''} hoje: {_join(items, n - len(items), 'lembretes')}.")
+    late = groups.get("atrasados", [])
+    if late:
+        n = len(late)
+        items = [r["texto"] for r in late[:MAX_EVENTS]]
+        parts.append(f"{n} {'estão atrasados' if n > 1 else 'está atrasado'}: {_join(items, n - len(items), 'lembretes')}.")
+    return " ".join(parts)
+
+
+def briefing_text(now: datetime, events: list[dict] | None, mails: list[dict] | None,
+                  reminders: dict[str, list[dict]] | None = None) -> str:
+    """Saudação, compromissos de hoje (com horário), e-mails que chegaram hoje e lembretes do dia."""
     if events is None or mails is None:
-        return NOT_CONNECTED
-    return " ".join([f"{_greeting(now)}.", _events_sentence(events), _mails_sentence(mails)])
+        parts = [NOT_CONNECTED]
+    else:
+        parts = [f"{_greeting(now)}.", _events_sentence(events), _mails_sentence(mails)]
+    parts.append(_reminders_sentence(reminders))
+    return " ".join(p for p in parts if p)

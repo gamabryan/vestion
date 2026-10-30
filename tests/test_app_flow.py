@@ -304,3 +304,56 @@ def test_panels_refresh_right_after_each_answer():
     app.on_hotkey()
     assert app.wait_jobs()
     assert refreshed == [1]
+
+
+def _reminder_app(tmp_path, answers):
+    from datetime import datetime, timedelta
+    from lia.reminders import ReminderStore
+    app = make_app(answers)
+    app.reminders = ReminderStore(tmp_path / "l.json")
+    shown, hidden = [], []
+    app.window.show_reminder = lambda rid, text: shown.append((rid, text))
+    app.window.hide_reminder = lambda rid: hidden.append(rid)
+    now = datetime.now().astimezone()
+    item = app.reminders.add("pagar a conta", now - timedelta(seconds=1))
+    return app, item, shown, hidden
+
+
+def test_due_reminder_is_shown_and_spoken_once(tmp_path):
+    app, item, shown, _ = _reminder_app(tmp_path, [])
+    app.check_reminders()
+    app.check_reminders()
+    assert shown == [(item["id"], "pagar a conta")]
+    assert "Lembrete: pagar a conta." in app.speaker.said
+    assert app.reminders.get(item["id"])["avisado"] is True
+
+
+def test_saying_done_completes_reminder(tmp_path):
+    app, item, _, hidden = _reminder_app(tmp_path, [])
+    app.check_reminders()
+    app.listener.answers = ["feito"]
+    app.on_hotkey()
+    assert app.reminders.get(item["id"])["feito"] is True
+    assert hidden == [item["id"]]
+    assert app.brain.calls == []
+
+
+def test_saying_later_snoozes_ten_minutes(tmp_path):
+    from datetime import datetime, timedelta
+    app, item, _, hidden = _reminder_app(tmp_path, [])
+    app.check_reminders()
+    app.listener.answers = ["adia"]
+    app.on_hotkey()
+    when = datetime.fromisoformat(app.reminders.get(item["id"])["quando"])
+    assert timedelta(minutes=9) < when - datetime.now().astimezone() <= timedelta(minutes=10)
+    assert app.reminders.get(item["id"])["avisado"] is False and hidden == [item["id"]]
+
+
+def test_form_adds_reminder_with_local_time(tmp_path):
+    from datetime import datetime
+    app, _, _, _ = _reminder_app(tmp_path, [])
+    app.add_reminder("comprar ração", "")
+    app.add_reminder("dentista", "2026-11-02T10:30")
+    items = {r["texto"]: r for r in app.reminders.all()}
+    assert items["comprar ração"]["quando"] is None
+    assert datetime.fromisoformat(items["dentista"]["quando"]) == datetime(2026, 11, 2, 10, 30).astimezone()

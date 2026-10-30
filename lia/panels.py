@@ -26,18 +26,44 @@ def gmail_panel(unread: list[dict], count: int) -> dict:
     return {"title": f"GMAIL · {count} NÃO LIDOS", "items": items}
 
 
+MAX_REMINDERS = 8
+
+
+def reminders_panel(groups: dict[str, list[dict]], now: datetime) -> dict:
+    """Atrasados (laranja), hoje (hora), próximos (data e hora) e tarefas sem hora."""
+    def when(r, fmt):
+        return datetime.fromisoformat(r["quando"]).astimezone().strftime(fmt)
+
+    today = now.astimezone().strftime("%d/%m")
+    items = [{"id": r["id"], "tag": when(r, "%H:%M") if when(r, "%d/%m") == today else when(r, "%d/%m"),
+              "text": r["texto"], "kind": "late"} for r in groups["atrasados"]]
+    items += [{"id": r["id"], "tag": when(r, "%H:%M"), "text": r["texto"], "kind": "today"} for r in groups["hoje"]]
+    items += [{"id": r["id"], "tag": when(r, "%d/%m %H:%M"), "text": r["texto"], "kind": "next"} for r in groups["proximos"]]
+    items += [{"id": r["id"], "tag": "", "text": r["texto"], "kind": "task"} for r in groups["sem_hora"]]
+    total = len(items)
+    return {"title": f"LEMBRETES · {total}", "items": items[:MAX_REMINDERS]}
+
+
 def not_connected_panel(title: str) -> dict:
     return {"title": title, "items": [{"tag": "", "text": NOT_CONNECTED_TEXT}]}
 
 
 class PanelUpdater:
-    def __init__(self, window, get_clients: Callable[[], tuple | None], every_s: int = 120):
+    def __init__(self, window, get_clients: Callable[[], tuple | None], every_s: int = 120, reminders=None):
         self.window = window
         self.get_clients = get_clients
         self.every_s = every_s
+        self.reminders = reminders
         self._failing = False
 
+    def refresh_reminders(self) -> None:
+        """Só o painel de lembretes (local, rápido): usado após cada mudança e pelo vigia de horários."""
+        if self.reminders is not None:
+            now = datetime.now().astimezone()
+            self.window.update_panel("lembretes", reminders_panel(self.reminders.groups(now), now))
+
     def refresh_once(self) -> None:
+        self.refresh_reminders()
         try:
             clients = self.get_clients()
             if clients is None:

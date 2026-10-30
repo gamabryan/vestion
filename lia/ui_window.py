@@ -14,9 +14,15 @@ UI_DIR = Path(__file__).with_name("ui")
 class _JsApi:
     """Exposto ao JavaScript como pywebview.api."""
 
-    def __init__(self, on_confirm: Callable[[str, bool], None], on_hide: Callable[[], None] = lambda: None):
+    def __init__(self, on_confirm: Callable[[str, bool], None], on_hide: Callable[[], None] = lambda: None,
+                 on_reminder_add: Callable[[str, str], None] = lambda t, q: None,
+                 on_reminder_done: Callable[[str], None] = lambda rid: None,
+                 on_reminder_snooze: Callable[[str], None] = lambda rid: None):
         self._on_confirm = on_confirm
         self._on_hide = on_hide
+        self._on_reminder_add = on_reminder_add
+        self._on_reminder_done = on_reminder_done
+        self._on_reminder_snooze = on_reminder_snooze
 
     def confirm(self, req_id: str, approved: bool) -> None:
         self._on_confirm(str(req_id), bool(approved))
@@ -25,6 +31,18 @@ class _JsApi:
         """Esc na central: esconde (o Vestion continua no ícone perto do relógio)."""
         self._on_hide()
 
+    def reminder_add(self, texto: str, quando: str) -> None:
+        """Formulário '+ novo lembrete' do painel. 'quando' vem do campo de data/hora (ou vazio)."""
+        texto = str(texto or "").strip()
+        if texto:
+            self._on_reminder_add(texto, str(quando or ""))
+
+    def reminder_done(self, rid: str) -> None:
+        self._on_reminder_done(str(rid))
+
+    def reminder_snooze(self, rid: str) -> None:
+        self._on_reminder_snooze(str(rid))
+
 
 class CentralWindow:
     def __init__(self, on_confirm: Callable[[str, bool], None]):
@@ -32,8 +50,16 @@ class CentralWindow:
         self._quitting = False
         self._hidden = False
         self._minimized = False
+        # O app liga estes depois de criar o armazenamento de lembretes.
+        self.on_reminder_add: Callable[[str, str], None] = lambda t, q: None
+        self.on_reminder_done: Callable[[str], None] = lambda rid: None
+        self.on_reminder_snooze: Callable[[str], None] = lambda rid: None
+        api = _JsApi(on_confirm, on_hide=self.hide,
+                     on_reminder_add=lambda t, q: self.on_reminder_add(t, q),
+                     on_reminder_done=lambda rid: self.on_reminder_done(rid),
+                     on_reminder_snooze=lambda rid: self.on_reminder_snooze(rid))
         self.window = webview.create_window(
-            "Vestion", url=str(UI_DIR / "index.html"), js_api=_JsApi(on_confirm, on_hide=self.hide),
+            "Vestion", url=str(UI_DIR / "index.html"), js_api=api,
             width=1280, height=800, min_size=(900, 620), background_color="#03070d",
             fullscreen=True)  # tela cheia total; Esc esconde, segurar Tab traz de volta
         self.window.events.loaded += self._loaded.set
@@ -94,6 +120,12 @@ class CentralWindow:
 
     def update_panel(self, name: str, data: dict) -> None:
         self._js("updatePanel", name, data)
+
+    def show_reminder(self, rid: str, text: str) -> None:
+        self._js("showReminder", rid, text)
+
+    def hide_reminder(self, rid: str) -> None:
+        self._js("hideReminder", rid)
 
     def speak(self, envelope: list[float], frame_ms: int) -> None:
         self._js("speak", envelope, frame_ms)

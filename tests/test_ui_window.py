@@ -89,3 +89,14 @@ def test_esc_from_page_hides_window():
     assert win.window.calls == ["hide"]
     win.show()
     assert win.window.calls == ["hide", "show"]
+
+
+def test_page_can_add_and_complete_reminders():
+    from lia.ui_window import _JsApi
+    calls = []
+    api = _JsApi(lambda rid, ok: None, on_reminder_add=lambda t, q: calls.append(("add", t, q)),
+                 on_reminder_done=lambda rid: calls.append(("done", rid)))
+    api.reminder_add("  pagar a conta ", "2026-10-31T10:00")
+    api.reminder_add("", "")  # vazio é ignorado
+    api.reminder_done("ab12")
+    assert calls == [("add", "pagar a conta", "2026-10-31T10:00"), ("done", "ab12")]
