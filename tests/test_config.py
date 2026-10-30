@@ -5,7 +5,7 @@ from lia.config import load_config
 
 def test_defaults_when_missing(tmp_path):
     cfg = load_config(tmp_path / "nao_existe.toml")
-    assert cfg.hotkey == "ctrl+alt+l"
+    assert cfg.hotkey == "ctrl+alt+a"
     assert cfg.confirm_timeout_s == 60
     assert cfg.voice == "pt-BR-FranciscaNeural"
     assert cfg.workspace == Path.home() / "Lia"

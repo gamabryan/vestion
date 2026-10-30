@@ -19,7 +19,7 @@ Requisito: o Claude Code instalado e logado com a sua conta (`claude` no termina
 ## Usar
 
 - Abra pelo atalho **Lia**. A central aparece e ela diz "Oi, estou pronta."
-- Aperte **Ctrl + Alt + L** e fale. Ela para de ouvir quando você faz uma pausa.
+- Aperte **Ctrl + Alt + A** e fale. Ela para de ouvir quando você faz uma pausa.
 - Se apertar o atalho enquanto ela fala, ela para e escuta você.
 - Fechar a janela só esconde a Lia; ela fica no ícone perto do relógio. Para encerrar: clique com o botão direito no ícone → **Sair**.
 
