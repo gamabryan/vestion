@@ -72,15 +72,19 @@ class LiaApp:
 
     # ---- fala do usuário ----------------------------------------------
     def on_hotkey(self) -> None:
+        log.info("atalho recebido")
         self.speaker.stop()
         self.window.show()
         self._generation += 1  # o resto da resposta anterior não deve mais ser falado
         if not self._listen_lock.acquire(timeout=1.5):
-            return  # já está ouvindo
+            log.info("atalho ignorado: já estava ouvindo")
+            return
         try:
             self.window.set_state("listening")
+            log.info("ouvindo (mudo=%s)", getattr(self.listener, "muted", None))
             try:
                 text = self.listener.listen_once()
+                log.info("ouvido: %r", text)
             except MicUnavailable:
                 self._say(NO_MIC)
                 self.window.set_state("idle")
@@ -204,6 +208,9 @@ def main() -> None:
 
     logging.basicConfig(filename=ROOT / "lia.log", level=logging.INFO, encoding="utf-8",
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    # Sem console (pythonw), erros em threads sumiriam: manda todos para o lia.log.
+    threading.excepthook = lambda a: log.error("erro na thread %s", a.thread.name if a.thread else "?",
+                                               exc_info=(a.exc_type, a.exc_value, a.exc_traceback))
     cfg = load_config(ROOT / "config.toml")
     holder: dict = {}
     bridge = ConfirmBridge(cfg.confirm_timeout_s,
