@@ -143,8 +143,11 @@ def test_moving_event_with_guests_asks_without_guests_runs():
     assert make_policy(lambda: Cal(2))(*mover) is True
     assert make_policy(lambda: Cal(0))(*mover) is False
     cancelar = ("mcp__lia__agenda_cancelar", {"id": "e1"})
-    assert make_policy(lambda: Cal(3))(*cancelar) is True  # convidados recebem e-mail
+    assert make_policy(lambda: Cal(3))(*cancelar) is False  # cancelar roda direto, mesmo com convidados
     assert make_policy(lambda: Cal(0))(*cancelar) is False
+    # logo depois de ler e-mails, avisar convidados pede o cartão
+    assert make_policy(lambda: Cal(3))(*cancelar, tainted=True) is True
+    assert make_policy(lambda: Cal(0))(*cancelar, tainted=True) is False
 
 
 def test_moving_event_asks_when_lookup_fails():
@@ -153,7 +156,8 @@ def test_moving_event_asks_when_lookup_fails():
     def broken():
         raise OSError("sem internet")
     assert make_policy(broken)("mcp__lia__agenda_mover", {"id": "e1"}) is True
-    assert make_policy(broken)("mcp__lia__agenda_cancelar", {"id": "e1"}) is True
+    assert make_policy(broken)("mcp__lia__agenda_cancelar", {"id": "e1"}) is False
+    assert make_policy(broken)("mcp__lia__agenda_cancelar", {"id": "e1"}, tainted=True) is True
 
 
 def test_policy_wrapper_keeps_normal_rules():

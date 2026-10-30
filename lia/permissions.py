@@ -180,9 +180,13 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
 
 
 def make_policy(calendar_getter):
-    """needs_confirmation, mas mover ou cancelar compromisso só pede o cartão quando tem convidados
-    (altera a agenda de outras pessoas; cancelar manda e-mail a elas). Sem conseguir conferir no Google, pede."""
+    """needs_confirmation, com regras da agenda (sem conseguir conferir no Google, pede):
+    - mover compromisso com convidados pede o cartão (altera a agenda de outras pessoas);
+    - cancelar roda direto (o usuário pediu), mas logo depois de ler e-mails, se tiver convidados
+      (que recebem e-mail), pede: um e-mail lido não pode mandar o Vestion avisar outras pessoas."""
     def policy(tool_name: str, tool_input: dict, tainted: bool = False) -> bool:
+        if tool_name == "mcp__lia__agenda_cancelar" and not tainted and not _touches_secrets(tool_input):
+            return False
         if tool_name in ("mcp__lia__agenda_mover", "mcp__lia__agenda_cancelar") and not _touches_secrets(tool_input):
             try:
                 return calendar_getter().get(str(tool_input.get("id", "")))["convidados"] > 0
