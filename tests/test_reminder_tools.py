@@ -42,15 +42,14 @@ def test_concluir_and_apagar(store):
     assert "não encontrei" in mcp_server.lembrete_apagar("zzz").lower()
 
 
-@pytest.mark.parametrize("tool", ["lembrete_criar", "lembrete_listar", "lembrete_concluir"])
-def test_create_list_complete_run_directly(tool):
+@pytest.mark.parametrize("tool", ["lembrete_criar", "lembrete_listar", "lembrete_concluir", "lembrete_apagar"])
+def test_all_reminder_tools_run_directly(tool):
     assert not needs_confirmation(f"mcp__lia__{tool}", {"texto": "x", "id": "1"})
 
 
-def test_delete_asks_and_card_shows_real_text(tmp_path):
+def test_delete_card_shows_real_text(tmp_path):
     s = ReminderStore(tmp_path / "lembretes.json")
     r = s.add("renovar a CNH")
-    assert needs_confirmation("mcp__lia__lembrete_apagar", {"id": r["id"]})
     card = make_describer(lambda: None, reminders=s)("mcp__lia__lembrete_apagar", {"id": r["id"]})
     assert card.title == "Apagar lembrete"
     assert card.detail == "renovar a CNH"

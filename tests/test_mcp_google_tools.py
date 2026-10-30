@@ -142,6 +142,9 @@ def test_moving_event_with_guests_asks_without_guests_runs():
     mover = ("mcp__lia__agenda_mover", {"id": "e1", "inicio": "2026-10-30T14:00", "fim": "2026-10-30T15:00"})
     assert make_policy(lambda: Cal(2))(*mover) is True
     assert make_policy(lambda: Cal(0))(*mover) is False
+    cancelar = ("mcp__lia__agenda_cancelar", {"id": "e1"})
+    assert make_policy(lambda: Cal(3))(*cancelar) is True  # convidados recebem e-mail
+    assert make_policy(lambda: Cal(0))(*cancelar) is False
 
 
 def test_moving_event_asks_when_lookup_fails():
@@ -150,6 +153,7 @@ def test_moving_event_asks_when_lookup_fails():
     def broken():
         raise OSError("sem internet")
     assert make_policy(broken)("mcp__lia__agenda_mover", {"id": "e1"}) is True
+    assert make_policy(broken)("mcp__lia__agenda_cancelar", {"id": "e1"}) is True
 
 
 def test_policy_wrapper_keeps_normal_rules():

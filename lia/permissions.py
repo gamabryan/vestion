@@ -32,8 +32,9 @@ AUTO_TOOLS = {"Read", "Glob", "Grep", "LS", "Edit", "MultiEdit", "NotebookEdit",
               # Gmail/Agenda: ler, rascunhar e mudar horário (sem avisar convidados) rodam direto
               "mcp__lia__gmail_nao_lidos", "mcp__lia__gmail_buscar", "mcp__lia__gmail_ler",
               "mcp__lia__gmail_rascunho", "mcp__lia__agenda_listar", "mcp__lia__agenda_mover",
-              # Lembretes: criar, ver e concluir rodam direto; apagar pede o cartão
-              "mcp__lia__lembrete_criar", "mcp__lia__lembrete_listar", "mcp__lia__lembrete_concluir"}
+              # Lembretes: tudo roda direto, inclusive apagar (o usuário pediu)
+              "mcp__lia__lembrete_criar", "mcp__lia__lembrete_listar", "mcp__lia__lembrete_concluir",
+              "mcp__lia__lembrete_apagar"}
 
 _RISKY = [
     # apagar / destruir
@@ -179,10 +180,10 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
 
 
 def make_policy(calendar_getter):
-    """needs_confirmation, mas mudar o horário de compromisso com convidados pede o cartão
-    (altera a agenda de outras pessoas). Sem conseguir conferir no Google, pede também."""
+    """needs_confirmation, mas mover ou cancelar compromisso só pede o cartão quando tem convidados
+    (altera a agenda de outras pessoas; cancelar manda e-mail a elas). Sem conseguir conferir no Google, pede."""
     def policy(tool_name: str, tool_input: dict, tainted: bool = False) -> bool:
-        if tool_name == "mcp__lia__agenda_mover" and not _touches_secrets(tool_input):
+        if tool_name in ("mcp__lia__agenda_mover", "mcp__lia__agenda_cancelar") and not _touches_secrets(tool_input):
             try:
                 return calendar_getter().get(str(tool_input.get("id", "")))["convidados"] > 0
             except Exception:
