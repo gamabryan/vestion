@@ -25,3 +25,5 @@ foreach ($pasta in $destinos) {
     $lnk.Save()
     Write-Host "Atalho criado em $pasta"
 }
+# Mesmo ID da janela: atalho fixado e janela aberta viram um ícone só na barra de tarefas.
+& (Join-Path $root ".venv\Scripts\python.exe") -c "import sys; sys.path.insert(0, r'$root'); from lia.appid import stamp_shortcuts; stamp_shortcuts()"

@@ -318,8 +318,12 @@ def main() -> None:
     from lia.panels import PanelUpdater
     from lia.permissions import ALLOWED_TOOLS, Taint, make_describer, make_policy
     from lia.reminders import ReminderStore
-    from lia.tray import start_tray
+    from lia.tray import ICON_PATH, save_ico, start_tray
     from lia.ui_window import CentralWindow
+
+    from lia.appid import set_process_app_id
+    set_process_app_id()  # ícone próprio na barra de tarefas, em vez do Python
+    icon = ICON_PATH if ICON_PATH.exists() else save_ico()
 
     logging.basicConfig(filename=ROOT / "lia.log", level=logging.INFO, encoding="utf-8",
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -397,7 +401,7 @@ def main() -> None:
         panels.start()
         app.start()
 
-    webview.start(on_start)
+    webview.start(on_start, icon=str(icon))
     os._exit(0)  # encerra threads de áudio e o hook de teclado junto com a janela
 
 
