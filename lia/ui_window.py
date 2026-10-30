@@ -26,7 +26,7 @@ class CentralWindow:
         self._loaded = threading.Event()
         self._quitting = False
         self.window = webview.create_window(
-            "Lia", url=str(UI_DIR / "index.html"), js_api=_JsApi(on_confirm),
+            "Vestion", url=str(UI_DIR / "index.html"), js_api=_JsApi(on_confirm),
             width=1280, height=800, min_size=(900, 620), background_color="#03070d")
         self.window.events.loaded += self._loaded.set
         self.window.events.closing += self._on_closing
@@ -80,7 +80,7 @@ def _demo(win: CentralWindow):
     import time
     from lia.system_stats import snapshot
     win._loaded.wait()
-    win.caption("Lia, o que eu tenho hoje?", "user")
+    win.caption("Vestion, o que eu tenho hoje?", "user")
     for state in ("listening", "thinking", "speaking", "idle"):
         win.set_state(state)
         win.caption(f"Estado de demonstração: {state}.")

@@ -33,7 +33,7 @@ def wait_shown(shown):
     raise AssertionError("cartão não apareceu")
 
 
-@pytest.mark.parametrize("text", ["pode", "Pode!", "Lia, pode mandar.", "confirmo", "sim pode"])
+@pytest.mark.parametrize("text", ["pode", "Pode!", "Vestion, pode mandar.", "confirmo", "sim pode"])
 def test_voice_approves(text):
     assert parse_voice_approval(text)
 

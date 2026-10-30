@@ -1,5 +1,5 @@
-# Cria o atalho "Lia" na Área de Trabalho e no menu Iniciar.
-# Não coloca nada na inicialização do Windows: a Lia só abre quando você quiser.
+# Cria o atalho "Vestion" na Área de Trabalho e no menu Iniciar (e remove o antigo "Lia").
+# Não coloca nada na inicialização do Windows: o Vestion só abre quando você quiser.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $pythonw = Join-Path $root ".venv\Scripts\pythonw.exe"
@@ -14,12 +14,14 @@ $destinos = @(
     (Join-Path ([Environment]::GetFolderPath("StartMenu")) "Programs")
 )
 foreach ($pasta in $destinos) {
-    $lnk = $shell.CreateShortcut((Join-Path $pasta "Lia.lnk"))
+    $antigo = Join-Path $pasta "Lia.lnk"
+    if (Test-Path $antigo) { Remove-Item $antigo }
+    $lnk = $shell.CreateShortcut((Join-Path $pasta "Vestion.lnk"))
     $lnk.TargetPath = $pythonw
     $lnk.Arguments = "`"$script`""
     $lnk.WorkingDirectory = $root
     $lnk.IconLocation = $icon
-    $lnk.Description = "Lia - assistente de voz"
+    $lnk.Description = "Vestion - assistente de voz"
     $lnk.Save()
     Write-Host "Atalho criado em $pasta"
 }

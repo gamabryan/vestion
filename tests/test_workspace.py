@@ -3,7 +3,7 @@ from lia.workspace import ensure_workspace
 
 def test_creates_files(tmp_path):
     root = ensure_workspace(tmp_path / "ws")
-    assert (root / "CLAUDE.md").read_text(encoding="utf-8").startswith("# Lia")
+    assert (root / "CLAUDE.md").read_text(encoding="utf-8").startswith("# Vestion")
     assert (root / "memoria.md").exists()
 
 

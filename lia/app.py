@@ -18,7 +18,7 @@ from lia.system_stats import snapshot
 
 ROOT = Path(__file__).resolve().parent.parent
 API_KEY_WARNING = "Aviso: chave de API removida para não gerar cobrança."
-GREETING = "Oi, estou pronta."
+GREETING = "Oi, estou pronto."
 NO_MIC = "Não encontrei um microfone."
 log = logging.getLogger(__name__)
 

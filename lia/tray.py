@@ -29,6 +29,6 @@ def start_tray(on_open: Callable[[], None], on_quit: Callable[[], None]) -> pyst
         pystray.MenuItem("Abrir central", lambda icon, item: on_open(), default=True),
         pystray.MenuItem("Sair", lambda icon, item: on_quit()),
     )
-    icon = pystray.Icon("lia", draw_icon(), "Lia", menu)
+    icon = pystray.Icon("vestion", draw_icon(), "Vestion", menu)
     icon.run_detached()
     return icon

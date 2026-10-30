@@ -177,7 +177,7 @@ class Speaker:
 if __name__ == "__main__":
     import sys
     s = Speaker(Config())
-    s.say(" ".join(sys.argv[1:]) or "Olá, eu sou a Lia.")
+    s.say(" ".join(sys.argv[1:]) or "Olá, eu sou o Vestion.")
     import time
     time.sleep(0.2)
     s.wait_idle()

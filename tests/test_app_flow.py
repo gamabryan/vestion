@@ -199,7 +199,7 @@ def test_api_key_warning_caption(monkeypatch):
     app.start(run_background=False)
     assert "ANTHROPIC_API_KEY" not in os.environ
     assert ("lia", API_KEY_WARNING) in app.window.captions
-    assert "Oi, estou pronta." in app.speaker.said
+    assert "Oi, estou pronto." in app.speaker.said
 
 
 # 6. Atalho no meio da resposta: frases antigas não são mais faladas
