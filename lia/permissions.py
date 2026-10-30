@@ -58,7 +58,9 @@ _RISKY = [
     # comandos que escondem outros comandos (podem fazer qualquer coisa acima)
     r"\b(iex|Invoke-Expression|Invoke-Command|wscript|cscript|mshta|rundll32|regsvr32|certutil|bitsadmin)\b",
     # Start-Process/start abrindo programa ou site é inofensivo; como administrador ou rodando interpretador, não
-    r"-Verb\s+[\"']?RunAs", r"\b(Start-Process|saps|start)\s+[\"']?(python3?|py|node|ruby|perl|bash|sh)\b",
+    r"-Verb\s+[\"']?RunAs",
+    r"\b(Start-Process|saps|start)\s+[\"']?(python3?|py|node|ruby|perl|bash|sh)\b",
+    r"\b(python3?|py|node|ruby|perl)(\.exe)?\s+(?!-)\S",  # rodar um arquivo de script
     r"\b(powershell|pwsh)(\.exe)?\b", r"\bcmd(\.exe)?\s+/[ck]\b", r"\b(bash|sh|zsh)\s+-c\b",
     r"\b(python3?|py|node|ruby|perl)(\.exe)?\s+(-c|-e)\b", r"\.(ps1|bat|cmd|vbs|vbe|js|wsf|hta|reg)\b",
     r"\b(curl|wget|iwr|Invoke-WebRequest)\b.*(\||-OutFile|\s-o\s)",

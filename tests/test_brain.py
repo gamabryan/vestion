@@ -97,4 +97,10 @@ def test_missing_claude_executable(tmp_path, monkeypatch):
 
 def test_build_command_denies_reading_token_folder():
     cmd = build_command("abc", False, Path("cfg.json"), ["Read"], [], deny_read=["C:/Users/PC/Lia/.lia"])
-    assert cmd[cmd.index("--disallowedTools") + 1] == "Read(C:/Users/PC/Lia/.lia/**)"
+    assert "Read(C:/Users/PC/Lia/.lia/**)" in cmd[cmd.index("--disallowedTools") + 1].split(",")
+
+
+def test_build_command_denies_grep_and_glob_on_token_folder():
+    cmd = build_command("abc", False, Path("cfg.json"), ["Read"], [], deny_read=["C:/w/.lia"])
+    rules = cmd[cmd.index("--disallowedTools") + 1].split(",")
+    assert set(rules) == {"Read(C:/w/.lia/**)", "Grep(C:/w/.lia/**)", "Glob(C:/w/.lia/**)"}

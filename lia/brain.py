@@ -60,7 +60,7 @@ def build_command(session_id: str, resume: bool, mcp_config: Path, allowed: list
             "--permission-prompt-tool", "mcp__lia__lia_confirmar",
             "--allowedTools", ",".join(allowed)]
     if deny_read:  # ex.: a pasta com o token do Google
-        cmd += ["--disallowedTools", ",".join(f"Read({p}/**)" for p in deny_read)]
+        cmd += ["--disallowedTools", ",".join(f"{tool}({p}/**)" for p in deny_read for tool in ("Read", "Grep", "Glob"))]
     for d in drives:
         cmd += ["--add-dir", d]
     return cmd

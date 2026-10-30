@@ -122,3 +122,12 @@ def test_anything_touching_token_folder_asks(tool, inp):
 def test_grep_and_glob_go_through_policy_not_cli_allowlist():
     from lia.permissions import ALLOWED_TOOLS
     assert "Grep" not in ALLOWED_TOOLS and "Glob" not in ALLOWED_TOOLS
+
+
+@pytest.mark.parametrize("cmd", ["python x.py", "py organiza.py", "node script.mjs", r"python3 C:\tmp\a.py arg"])
+def test_running_script_files_asks(cmd):
+    assert bash(cmd)
+
+
+def test_python_version_check_is_fine():
+    assert not bash("python --version")
