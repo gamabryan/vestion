@@ -280,8 +280,12 @@ class LiaApp:
         self.on_reminders_changed()
 
     def _reminder_loop(self) -> None:
+        turn = 0
         while self._running:
             try:
+                if self.reminders is not None and turn % 4 == 0:  # Google Tasks a cada minuto (o que mudou pelo celular aparece aqui)
+                    self.reminders.sync()
+                turn += 1
                 self.check_reminders()
                 self.on_reminders_changed()  # atrasados mudam de cor com o tempo
             except Exception:
@@ -308,6 +312,7 @@ def main() -> None:
     from lia.google.auth import connect_interactive, credentials_file, load_credentials
     from lia.google.calendar import CalendarClient
     from lia.google.gmail import GmailClient
+    from lia.google.tasks import TasksClient
     from lia.hotkey import register_hotkey
     from lia.mcp_config import write_mcp_config
     from lia.panels import PanelUpdater
@@ -336,7 +341,11 @@ def main() -> None:
         clients = google_clients()
         return clients[1] if clients else None
 
-    reminders = ReminderStore(cfg.workspace / "lembretes.json")
+    def tasks_client():
+        creds = load_credentials(cfg.workspace)
+        return TasksClient.from_credentials(creds) if creds else None
+
+    reminders = ReminderStore(cfg.workspace / "lembretes.json", remote=tasks_client)
     taint = Taint()
     port, token = start_bridge(bridge, describe=make_describer(calendar_only, reminders=reminders), taint=taint,
                                policy=make_policy(calendar_only))
@@ -355,6 +364,7 @@ def main() -> None:
 
     def briefing():
         now = datetime.now().astimezone()
+        reminders.sync()
         groups = reminders.groups(now)
         clients = google_clients()
         if not clients:
@@ -372,6 +382,7 @@ def main() -> None:
             return
         app._say("Abri o navegador. Entre na sua conta Google e autorize o Vestion.")
         if connect_interactive(cfg.workspace):
+            reminders.sync()  # lembretes que estavam só no PC vão para o Google Tasks
             panels.refresh_once()
             app._say("Pronto, conectei sua conta Google.")
         else:

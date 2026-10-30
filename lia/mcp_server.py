@@ -157,10 +157,19 @@ def agenda_mover(id: str, inicio: str, fim: str) -> str:
     return "Horário alterado."
 
 
-# ---- Lembretes (só no PC) ------------------------------------------------------------
+# ---- Lembretes (Google Tasks, com cópia no PC) -------------------------------------------
+def _tasks():
+    creds = _creds()
+    if not creds:
+        return None
+    from lia.google.tasks import TasksClient
+    return TasksClient.from_credentials(creds)
+
+
 def _reminders():
     from lia.reminders import ReminderStore
-    return ReminderStore(Path(os.environ.get("LIA_WORKSPACE", Path.home() / "Lia")) / "lembretes.json")
+    return ReminderStore(Path(os.environ.get("LIA_WORKSPACE", Path.home() / "Lia")) / "lembretes.json",
+                         remote=_tasks)
 
 
 @server.tool(structured_output=False)
@@ -173,9 +182,11 @@ def lembrete_criar(texto: str, quando: str = "") -> str:
 
 @server.tool(structured_output=False)
 def lembrete_listar() -> str:
-    """Lembretes e tarefas pendentes (não feitos), com id, texto e quando."""
+    """Lembretes e tarefas pendentes (não feitos), com id, texto e quando. Inclui os do Google Tasks."""
+    store = _reminders()
+    store.sync()
     return _json([{"id": r["id"], "texto": r["texto"], "quando": r["quando"]}
-                  for r in _reminders().all() if not r["feito"]])
+                  for r in store.all() if not r["feito"]])
 
 
 @server.tool(structured_output=False)

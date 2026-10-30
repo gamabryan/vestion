@@ -16,6 +16,7 @@ Você cria um "acesso" no Google em seu próprio nome, e o Vestion usa esse aces
 1. No menu (☰), vá em **APIs e serviços → Biblioteca**.
 2. Procure **Gmail API**, abra e clique em **Ativar**.
 3. Volte à Biblioteca, procure **Google Calendar API**, abra e clique em **Ativar**.
+4. Faça o mesmo com **Google Tasks API** (os lembretes do Vestion ficam no Google Tasks).
 
 ## 3. Tela de consentimento
 

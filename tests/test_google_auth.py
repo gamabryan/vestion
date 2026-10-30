@@ -31,7 +31,8 @@ def test_paths(tmp_path):
     assert credentials_file(tmp_path) == tmp_path / "google_credentials.json"
     assert token_file(tmp_path) == tmp_path / ".lia" / "google_token.json"
     assert SCOPES == ["https://www.googleapis.com/auth/gmail.modify",
-                      "https://www.googleapis.com/auth/calendar.events"]
+                      "https://www.googleapis.com/auth/calendar.events",
+                      "https://www.googleapis.com/auth/tasks"]
 
 
 def test_token_is_encrypted_at_rest(tmp_path):

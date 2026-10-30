@@ -35,7 +35,8 @@ Siga o guia [docs/conectar-google.md](docs/conectar-google.md) (uma vez só, gra
 - Tudo é pela voz: o painel **LEMBRETES** só mostra os pendentes (atrasados em laranja).
 - Na hora marcada, a central aparece, ele fala o lembrete e mostra **Feito** / **Adiar 10 min** (ou responda falando "feito" / "adia"). Só funciona com o Vestion aberto; se ele estava fechado, o lembrete aparece como atrasado.
 - Ao abrir, o resumo do dia inclui os lembretes de hoje e os atrasados.
-- Ficam só no PC, em `C:\Users\<você>\Lia\lembretes.json`.
+- Com a conta Google conectada, ficam no **Google Tasks** ("Minhas tarefas"): aparecem no celular, e o que você criar ou concluir lá aparece aqui em até um minuto. O Google só guarda o dia; a hora do aviso fica no PC (tarefa criada no celular com data avisa às 9h). Sem internet ele usa a cópia em `C:\Users\<você>\Lia\lembretes.json` e envia depois.
+- Para ativar: ligue a **Google Tasks API** no projeto do Google Cloud e clique em **Conectar Google** de novo (a nova permissão precisa ser autorizada; até lá Gmail e Agenda aparecem como desconectados).
 
 ## Confirmações
 
