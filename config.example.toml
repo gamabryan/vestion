@@ -1,0 +1,9 @@
+# Copie para config.toml e ajuste o que quiser.
+hotkey = "ctrl+alt+space"
+voice = "pt-BR-FranciscaNeural"
+piper_voice = "pt_BR-faber-medium"
+whisper_model = "auto"   # auto, small, medium
+# workspace = "C:/Users/PC/Lia"
+session_idle_hours = 2.0
+confirm_timeout_s = 60
+voice_confirm_window_s = 15

@@ -1,0 +1,13 @@
+pywebview>=5.0
+pystray>=0.19
+Pillow>=10.0
+keyboard>=0.13.5
+sounddevice>=0.4.6
+numpy>=1.26
+faster-whisper>=1.0
+edge-tts>=6.1
+miniaudio>=1.59
+piper-tts>=1.2
+psutil>=5.9
+mcp>=1.2
+pytest>=8.0
