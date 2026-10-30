@@ -285,3 +285,13 @@ def test_new_utterance_clears_mail_taint():
     app.on_hotkey()
     assert app.wait_jobs()
     assert not app.taint.active
+
+
+def test_slow_briefing_falls_back_to_greeting_fast():
+    app = make_app([])
+    app.briefing_timeout_s = 0.2
+    app.briefing = lambda: (time.sleep(3), "tarde demais")[1]
+    start = time.time()
+    app.start(run_background=False)
+    assert time.time() - start < 1.5
+    assert app.speaker.said[-1] == "Oi, estou pronto."

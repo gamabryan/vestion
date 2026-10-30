@@ -34,6 +34,7 @@ class LiaApp:
         self.on_quit: list[Callable[[], None]] = []
         self.briefing: Callable[[], str] | None = None  # resumo do dia ao abrir (agenda + Gmail)
         self.taint = None  # Taint compartilhado com a ponte (e-mails lidos neste pedido)
+        self.briefing_timeout_s = 6.0
         self._jobs: queue.Queue[str] = queue.Queue()
         self._listen_lock = threading.Lock()
         self._running = True
@@ -55,13 +56,24 @@ class LiaApp:
                 self.listener.preload()
             threading.Thread(target=self._stats_loop, daemon=True).start()
         self.window.set_state("idle")
-        text = GREETING
-        if self.briefing:
+        self._say(self._briefing_or_greeting())
+
+    def _briefing_or_greeting(self) -> str:
+        """Resumo do dia; se o Google demorar ou falhar (sem internet), só a saudação."""
+        if not self.briefing:
+            return GREETING
+        result: list[str] = []
+
+        def build():
             try:
-                text = self.briefing()
+                result.append(self.briefing())
             except Exception:
                 log.exception("falha ao montar o resumo do dia")
-        self._say(text)
+
+        worker = threading.Thread(target=build, daemon=True)
+        worker.start()
+        worker.join(self.briefing_timeout_s)
+        return result[0] if result else GREETING
 
     def quit(self) -> None:
         self._running = False
