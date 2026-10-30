@@ -109,3 +109,23 @@ def test_alert_buttons_still_answer_reminder():
     api.reminder_done("ab12")
     api.reminder_snooze("cd34")
     assert calls == [("done", "ab12"), ("snooze", "cd34")]
+
+
+def test_theme_saved_and_loaded(tmp_path):
+    from lia.ui_window import load_theme, save_theme
+    prefs = tmp_path / ".lia" / "ui.json"
+    assert load_theme(prefs) == "cyan"
+    save_theme(prefs, "red")
+    assert load_theme(prefs) == "red"
+    save_theme(prefs, "rosa")  # desconhecido não é gravado
+    assert load_theme(prefs) == "red"
+    prefs.write_text("lixo", encoding="utf-8")
+    assert load_theme(prefs) == "cyan"
+
+
+def test_js_api_set_theme_reaches_window():
+    from lia.ui_window import _JsApi
+    got = []
+    api = _JsApi(lambda r, ok: None, on_theme=got.append)
+    api.set_theme("red")
+    assert got == ["red"]

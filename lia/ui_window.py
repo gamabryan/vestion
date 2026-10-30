@@ -9,6 +9,24 @@ import webview
 from lia.permissions import ActionCard
 
 UI_DIR = Path(__file__).with_name("ui")
+THEMES = ("cyan", "red")
+
+
+def load_theme(prefs: Path) -> str:
+    """Tema de cor escolhido no botão do topo (ciano se nunca escolheu ou o arquivo estragou)."""
+    try:
+        theme = json.loads(Path(prefs).read_text(encoding="utf-8")).get("tema")
+    except (OSError, ValueError, AttributeError):
+        return "cyan"
+    return theme if theme in THEMES else "cyan"
+
+
+def save_theme(prefs: Path, theme: str) -> None:
+    if theme not in THEMES:
+        return
+    prefs = Path(prefs)
+    prefs.parent.mkdir(parents=True, exist_ok=True)
+    prefs.write_text(json.dumps({"tema": theme}), encoding="utf-8")
 
 
 class _JsApi:
@@ -16,11 +34,17 @@ class _JsApi:
 
     def __init__(self, on_confirm: Callable[[str, bool], None], on_hide: Callable[[], None] = lambda: None,
                  on_reminder_done: Callable[[str], None] = lambda rid: None,
-                 on_reminder_snooze: Callable[[str], None] = lambda rid: None):
+                 on_reminder_snooze: Callable[[str], None] = lambda rid: None,
+                 on_theme: Callable[[str], None] = lambda theme: None):
         self._on_confirm = on_confirm
         self._on_hide = on_hide
         self._on_reminder_done = on_reminder_done
         self._on_reminder_snooze = on_reminder_snooze
+        self._on_theme = on_theme
+
+    def set_theme(self, theme: str) -> None:
+        """Botão de cor no topo da central."""
+        self._on_theme(str(theme))
 
     def confirm(self, req_id: str, approved: bool) -> None:
         self._on_confirm(str(req_id), bool(approved))
@@ -45,18 +69,29 @@ class CentralWindow:
         # O app liga estes depois de criar o armazenamento de lembretes.
         self.on_reminder_done: Callable[[str], None] = lambda rid: None
         self.on_reminder_snooze: Callable[[str], None] = lambda rid: None
+        # Tema de cor: o app define o inicial e onde guardar a escolha.
+        self.theme = "cyan"
+        self.on_theme: Callable[[str], None] = lambda theme: None
         api = _JsApi(on_confirm, on_hide=self.hide,
                      on_reminder_done=lambda rid: self.on_reminder_done(rid),
-                     on_reminder_snooze=lambda rid: self.on_reminder_snooze(rid))
+                     on_reminder_snooze=lambda rid: self.on_reminder_snooze(rid),
+                     on_theme=self._set_theme)
         self.window = webview.create_window(
             "Vestion", url=str(UI_DIR / "index.html"), js_api=api,
             width=1280, height=800, min_size=(900, 620), background_color="#03070d",
             fullscreen=True)  # tela cheia total; Esc esconde, segurar Tab traz de volta
         self.window.events.loaded += self._loaded.set
+        self.window.events.loaded += lambda: threading.Thread(
+            target=lambda: self._js("setTheme", self.theme), daemon=True).start()
         self.window.events.closing += self._on_closing
         self.window.events.minimized += self._on_minimized
         self.window.events.restored += self._on_restored
         self.window.events.maximized += self._on_restored
+
+    def _set_theme(self, theme: str) -> None:
+        if theme in THEMES:
+            self.theme = theme
+            self.on_theme(theme)
 
     def _on_minimized(self):
         self._minimized = True

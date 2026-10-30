@@ -17,7 +17,14 @@ renderer.setSize(innerWidth, innerHeight);
 document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x01040a, 0.09);
+const PALETTES = {
+  cyan: { idle: 0x3aa8d8, listening: 0x5fe4ff, thinking: 0xa98bff, speaking: 0x6feaff,
+          dust: 0x4fb8e0, circuit: 0x2a7fb0, dot: 0x9ff0ff, fog: 0x01040a },
+  red: { idle: 0xd83040, listening: 0xff4a5c, thinking: 0xff8a3d, speaking: 0xff5c6a,
+         dust: 0xe0404f, circuit: 0xb02a36, dot: 0xffa3aa, fog: 0x0a0103 },
+};
+const initial = PALETTES[(window.lia && window.lia.theme) || "cyan"] || PALETTES.cyan;
+scene.fog = new THREE.FogExp2(initial.fog, 0.09);
 const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 100);
 camera.position.set(0, -0.05, 5.4);
 
@@ -27,10 +34,10 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.
 composer.addPass(bloom);
 
 const COLORS = {
-  idle: new THREE.Color(0x3aa8d8),
-  listening: new THREE.Color(0x5fe4ff),
-  thinking: new THREE.Color(0xa98bff),
-  speaking: new THREE.Color(0x6feaff),
+  idle: new THREE.Color(initial.idle),
+  listening: new THREE.Color(initial.listening),
+  thinking: new THREE.Color(initial.thinking),
+  speaking: new THREE.Color(initial.speaking),
 };
 const tint = COLORS.idle.clone();
 
@@ -180,11 +187,11 @@ const dustN = 1400, dustPos = new Float32Array(dustN * 3);
 for (let i = 0; i < dustN; i++) dustPos.set([(rand() - 0.5) * 14, (rand() - 0.5) * 9, -1.5 - rand() * 6], i * 3);
 const dustGeo = new THREE.BufferGeometry();
 dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
-const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: 0x4fb8e0, size: 0.018, transparent: true, opacity: 0.55,
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: initial.dust, size: 0.018, transparent: true, opacity: 0.55,
                                                                    blending: THREE.AdditiveBlending, depthWrite: false }));
 scene.add(dust);
 
-const circuits = [];
+const circuits = [], circuitMats = [], dotMats = [];
 for (let k = 0; k < 26; k++) {
   const side = k % 2 ? 1 : -1;
   let x = side * (1.9 + rand() * 0.4), y = (rand() - 0.5) * 3.6;
@@ -193,9 +200,12 @@ for (let k = 0; k < 26; k++) {
     if (s % 2 === 0) x += side * (0.4 + rand() * 1.4); else y += (rand() - 0.5) * 0.9;
     path.push(new THREE.Vector3(x, y, -2.2));
   }
-  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(path),
-                           new THREE.LineBasicMaterial({ color: 0x2a7fb0, transparent: true, opacity: 0.35 })));
-  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), new THREE.MeshBasicMaterial({ color: 0x9ff0ff }));
+  const lineMatC = new THREE.LineBasicMaterial({ color: initial.circuit, transparent: true, opacity: 0.35 });
+  circuitMats.push(lineMatC);
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(path), lineMatC));
+  const dotMat = new THREE.MeshBasicMaterial({ color: initial.dot });
+  dotMats.push(dotMat);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), dotMat);
   scene.add(dot);
   const lens = []; let total = 0;
   for (let i = 1; i < path.length; i++) { const l = path[i].distanceTo(path[i - 1]); lens.push(l); total += l; }
@@ -231,6 +241,7 @@ function animate() {
   tint.lerp(COLORS[state] || COLORS.idle, 0.05);
   pointMat.uniforms.uTime.value = t;
   pointMat.uniforms.uLevel.value = level;
+  lineMat.color.copy(tint);  // a malha acompanha o estado e o tema de cor
   lineMat.opacity = 0.11 + level * 0.18 + (state === "thinking" ? 0.08 * Math.sin(t * 8) ** 2 : 0);
   bloom.strength = 0.7 + level * 0.45 + (state === "idle" ? -0.2 : 0);
 
@@ -283,4 +294,14 @@ function animate() {
   composer.render();
 }
 animate();
+
+// Troca de tema (app.js chama ao clicar no botão do topo). O tom do rosto acompanha aos poucos.
+window.liaSetFaceTheme = (name) => {
+  const p = PALETTES[name] || PALETTES.cyan;
+  for (const k of ["idle", "listening", "thinking", "speaking"]) COLORS[k].setHex(p[k]);
+  dust.material.color.setHex(p.dust);
+  circuitMats.forEach((m) => m.color.setHex(p.circuit));
+  dotMats.forEach((m) => m.color.setHex(p.dot));
+  scene.fog.color.setHex(p.fog);
+};
 window.liaFaceReady = true;

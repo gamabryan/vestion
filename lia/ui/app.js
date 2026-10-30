@@ -75,11 +75,26 @@
   $("btn-reminder-done").addEventListener("click", () => answerReminder(true));
   $("btn-reminder-snooze").addEventListener("click", () => answerReminder(false));
 
+  // Tema de cor (ciano / vermelho): só troca as cores, o layout fica igual.
+  const THEMES = ["cyan", "red"];
+  $("theme-toggle").addEventListener("click", () => {
+    const next = window.lia.theme === "red" ? "cyan" : "red";
+    window.lia.setTheme(next);
+    if (window.pywebview && window.pywebview.api) window.pywebview.api.set_theme(next);
+  });
+
   // Se o rosto 3D não subir (sem WebGL ou erro), mostra o núcleo simples no lugar de uma tela vazia.
   setTimeout(() => { if (!window.liaFaceReady) document.body.classList.add("no-webgl"); }, 4000);
 
   window.lia = {
     state: "idle",
+    theme: "cyan",
+    setTheme(name) {
+      if (!THEMES.includes(name)) return;
+      this.theme = name;
+      document.body.classList.toggle("theme-red", name === "red");
+      if (window.liaSetFaceTheme) window.liaSetFaceTheme(name);
+    },
     setState(state) {
       this.state = state;
       document.body.classList.remove("idle", "listening", "thinking", "speaking");

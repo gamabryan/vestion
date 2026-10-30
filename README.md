@@ -23,6 +23,7 @@ Requisito: o Claude Code instalado e logado com a sua conta (`claude` no termina
   Um toque rápido no Tab continua funcionando normal em qualquer programa, e Alt+Tab não chama o Vestion.
 - Se apertar o atalho enquanto ele fala, ele para e escuta você.
 - A central abre em **tela cheia**. **Esc** esconde a central (o Vestion continua no ícone perto do relógio); segurar o Tab ou **Abrir central** no ícone traz de volta.
+- O botão redondo no canto de cima, ao lado do relógio, alterna a cor da central entre **ciano** e **vermelho** (o layout fica igual). Ele lembra a escolha.
 - Para encerrar: clique com o botão direito no ícone → **Sair**.
 
 ## Conectar Gmail e Agenda

@@ -319,7 +319,7 @@ def main() -> None:
     from lia.permissions import ALLOWED_TOOLS, Taint, make_describer, make_policy
     from lia.reminders import ReminderStore
     from lia.tray import ICON_PATH, save_ico, start_tray
-    from lia.ui_window import CentralWindow
+    from lia.ui_window import CentralWindow, load_theme, save_theme
 
     from lia.appid import set_process_app_id
     set_process_app_id()  # ícone próprio na barra de tarefas, em vez do Python
@@ -355,6 +355,9 @@ def main() -> None:
                                policy=make_policy(calendar_only))
     mcp_cfg = write_mcp_config(cfg.workspace / ".lia" / "mcp.json", port, token, workspace=cfg.workspace)
     window = CentralWindow(on_confirm=bridge.resolve)
+    ui_prefs = cfg.workspace / ".lia" / "ui.json"
+    window.theme = load_theme(ui_prefs)
+    window.on_theme = lambda theme: save_theme(ui_prefs, theme)
     brain = Brain(cfg, mcp_cfg, lambda: holder["app"].on_api_key_removed(), ALLOWED_TOOLS)
     brain.is_waiting_user = bridge.has_pending
     app = LiaApp(cfg, brain, Listener(cfg), Speaker(cfg), window, bridge)
