@@ -230,7 +230,7 @@ def main() -> None:
     from lia.hotkey import register_hotkey
     from lia.mcp_config import write_mcp_config
     from lia.panels import PanelUpdater
-    from lia.permissions import ALLOWED_TOOLS, Taint, make_describer
+    from lia.permissions import ALLOWED_TOOLS, Taint, make_describer, make_policy
     from lia.tray import start_tray
     from lia.ui_window import CentralWindow
 
@@ -255,7 +255,8 @@ def main() -> None:
         return clients[1] if clients else None
 
     taint = Taint()
-    port, token = start_bridge(bridge, describe=make_describer(calendar_only), taint=taint)
+    port, token = start_bridge(bridge, describe=make_describer(calendar_only), taint=taint,
+                               policy=make_policy(calendar_only))
     mcp_cfg = write_mcp_config(cfg.workspace / ".lia" / "mcp.json", port, token, workspace=cfg.workspace)
     window = CentralWindow(on_confirm=bridge.resolve)
     brain = Brain(cfg, mcp_cfg, lambda: holder["app"].on_api_key_removed(), ALLOWED_TOOLS)

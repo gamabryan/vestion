@@ -11,7 +11,8 @@ from lia.permissions import describe_action, needs_confirmation
 log = logging.getLogger(__name__)
 
 
-def start_bridge(bridge: ConfirmBridge, describe=describe_action, taint=None) -> tuple[int, str]:
+def start_bridge(bridge: ConfirmBridge, describe=describe_action, taint=None,
+                 policy=needs_confirmation) -> tuple[int, str]:
     token = secrets.token_hex(16)
 
     class Handler(BaseHTTPRequestHandler):
@@ -31,7 +32,7 @@ def start_bridge(bridge: ConfirmBridge, describe=describe_action, taint=None) ->
             tainted = bool(taint and taint.active)
             if taint:
                 taint.observe(tool_name)  # leu e-mail: daqui até o próximo pedido, saídas pedem cartão
-            if needs_confirmation(tool_name, tool_input, tainted=tainted):
+            if policy(tool_name, tool_input, tainted=tainted):
                 approved = bridge.request(card)
                 log.info("confirmação %s: %s %s", "APROVADA" if approved else "RECUSADA", card.title, card.detail[:200])
             else:

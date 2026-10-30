@@ -156,6 +156,10 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
         detail = (f"{tool_input.get('titulo', '')}\n{tool_input.get('inicio', '')} até {tool_input.get('fim', '')}\n"
                   f"Convidados: {', '.join(tool_input.get('convidados') or [])}")
         spoken = "Posso criar o compromisso e mandar os convites?"
+    elif tool_name == "mcp__lia__agenda_mover":
+        title = "Mudar horário de compromisso com convidados"
+        detail = f"Novo horário: {tool_input.get('inicio', '')} até {tool_input.get('fim', '')}"
+        spoken = "Posso mudar o horário do compromisso que está na tela?"
     elif tool_name == "mcp__lia__agenda_cancelar":
         title, detail = "Cancelar compromisso", f"Compromisso id {tool_input.get('id', '')}"
         spoken = "Posso cancelar o compromisso que está na tela?"
@@ -167,6 +171,19 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
         detail = json.dumps(tool_input, ensure_ascii=False)[:400]
         spoken = "Posso continuar com a ação que está na tela?"
     return ActionCard(title, detail, spoken)
+
+
+def make_policy(calendar_getter):
+    """needs_confirmation, mas mudar o horário de compromisso com convidados pede o cartão
+    (altera a agenda de outras pessoas). Sem conseguir conferir no Google, pede também."""
+    def policy(tool_name: str, tool_input: dict, tainted: bool = False) -> bool:
+        if tool_name == "mcp__lia__agenda_mover" and not _touches_secrets(tool_input):
+            try:
+                return calendar_getter().get(str(tool_input.get("id", "")))["convidados"] > 0
+            except Exception:
+                return True
+        return needs_confirmation(tool_name, tool_input, tainted=tainted)
+    return policy
 
 
 def make_describer(calendar_getter):

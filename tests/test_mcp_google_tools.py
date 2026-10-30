@@ -126,3 +126,42 @@ def test_create_with_guests_card():
     assert card.title == "Criar compromisso e enviar convites"
     assert "ana@x.com" in card.detail and "Reunião" in card.detail
     assert card.spoken == "Posso criar o compromisso e mandar os convites?"
+
+
+def test_moving_event_with_guests_asks_without_guests_runs():
+    from lia.permissions import make_policy
+
+    class Cal:
+        def __init__(self, guests):
+            self.guests = guests
+
+        def get(self, event_id):
+            return {"id": event_id, "titulo": "x", "inicio": datetime(2026, 10, 30, 10, tzinfo=LOCAL),
+                    "fim": datetime(2026, 10, 30, 11, tzinfo=LOCAL), "dia_todo": False, "local": "", "convidados": self.guests}
+
+    mover = ("mcp__lia__agenda_mover", {"id": "e1", "inicio": "2026-10-30T14:00", "fim": "2026-10-30T15:00"})
+    assert make_policy(lambda: Cal(2))(*mover) is True
+    assert make_policy(lambda: Cal(0))(*mover) is False
+
+
+def test_moving_event_asks_when_lookup_fails():
+    from lia.permissions import make_policy
+
+    def broken():
+        raise OSError("sem internet")
+    assert make_policy(broken)("mcp__lia__agenda_mover", {"id": "e1"}) is True
+
+
+def test_policy_wrapper_keeps_normal_rules():
+    from lia.permissions import make_policy
+    policy = make_policy(lambda: None)
+    assert policy("Bash", {"command": "dir"}) is False
+    assert policy("Bash", {"command": "del x"}) is True
+    assert policy("WebFetch", {"url": "https://x"}, tainted=True) is True
+
+
+def test_move_card_is_readable():
+    card = describe_action("mcp__lia__agenda_mover", {"id": "e1", "inicio": "2026-10-30T14:00", "fim": "2026-10-30T15:00"})
+    assert card.title == "Mudar horário de compromisso com convidados"
+    assert "2026-10-30T14:00" in card.detail
+    assert card.spoken == "Posso mudar o horário do compromisso que está na tela?"
