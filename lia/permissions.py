@@ -31,7 +31,9 @@ AUTO_TOOLS = {"Read", "Glob", "Grep", "LS", "Edit", "MultiEdit", "NotebookEdit",
               "WebFetch", "WebSearch", "mcp__lia__lia_abrir",
               # Gmail/Agenda: ler, rascunhar e mudar horário (sem avisar convidados) rodam direto
               "mcp__lia__gmail_nao_lidos", "mcp__lia__gmail_buscar", "mcp__lia__gmail_ler",
-              "mcp__lia__gmail_rascunho", "mcp__lia__agenda_listar", "mcp__lia__agenda_mover"}
+              "mcp__lia__gmail_rascunho", "mcp__lia__agenda_listar", "mcp__lia__agenda_mover",
+              # Lembretes: criar, ver e concluir rodam direto; apagar pede o cartão
+              "mcp__lia__lembrete_criar", "mcp__lia__lembrete_listar", "mcp__lia__lembrete_concluir"}
 
 _RISKY = [
     # apagar / destruir
@@ -160,6 +162,9 @@ def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
         title = "Mudar horário de compromisso com convidados"
         detail = f"Novo horário: {tool_input.get('inicio', '')} até {tool_input.get('fim', '')}"
         spoken = "Posso mudar o horário do compromisso que está na tela?"
+    elif tool_name == "mcp__lia__lembrete_apagar":
+        title, detail = "Apagar lembrete", f"Lembrete id {tool_input.get('id', '')}"
+        spoken = "Posso apagar o lembrete que está na tela?"
     elif tool_name == "mcp__lia__agenda_cancelar":
         title, detail = "Cancelar compromisso", f"Compromisso id {tool_input.get('id', '')}"
         spoken = "Posso cancelar o compromisso que está na tela?"
@@ -186,11 +191,15 @@ def make_policy(calendar_getter):
     return policy
 
 
-def make_describer(calendar_getter):
-    """describe_action, mas o cartão de cancelar mostra o compromisso real buscado no Google pelo id,
-    e não o texto que o Claude mandou."""
+def make_describer(calendar_getter, reminders=None):
+    """describe_action, mas os cartões de cancelar compromisso e apagar lembrete mostram o item real,
+    buscado pelo id, e não o texto que o Claude mandou."""
     def describe(tool_name: str, tool_input: dict) -> ActionCard:
         card = describe_action(tool_name, tool_input)
+        if tool_name == "mcp__lia__lembrete_apagar" and reminders is not None:
+            item = reminders.get(str(tool_input.get("id", "")))
+            if item:
+                card.detail = item["texto"] + (f" — {item['quando'][:16].replace('T', ' ')}" if item["quando"] else "")
         if tool_name == "mcp__lia__agenda_cancelar":
             event_id = str(tool_input.get("id", ""))
             try:

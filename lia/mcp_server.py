@@ -157,6 +157,39 @@ def agenda_mover(id: str, inicio: str, fim: str) -> str:
     return "Horário alterado."
 
 
+# ---- Lembretes (só no PC) ------------------------------------------------------------
+def _reminders():
+    from lia.reminders import ReminderStore
+    return ReminderStore(Path(os.environ.get("LIA_WORKSPACE", Path.home() / "Lia")) / "lembretes.json")
+
+
+@server.tool(structured_output=False)
+def lembrete_criar(texto: str, quando: str = "") -> str:
+    """Cria um lembrete. 'quando' = data/hora ISO local (ex.: 2026-10-31T10:00); vazio = tarefa sem hora.
+    Na hora marcada o Vestion avisa o usuário em voz alta."""
+    item = _reminders().add(texto, _when(quando) if quando else None)
+    return f"Lembrete criado (id {item['id']})."
+
+
+@server.tool(structured_output=False)
+def lembrete_listar() -> str:
+    """Lembretes e tarefas pendentes (não feitos), com id, texto e quando."""
+    return _json([{"id": r["id"], "texto": r["texto"], "quando": r["quando"]}
+                  for r in _reminders().all() if not r["feito"]])
+
+
+@server.tool(structured_output=False)
+def lembrete_concluir(id: str) -> str:
+    """Marca um lembrete como feito."""
+    return "Marcado como feito." if _reminders().complete(id) else "Não encontrei esse lembrete."
+
+
+@server.tool(structured_output=False)
+def lembrete_apagar(id: str) -> str:
+    """Apaga um lembrete de vez."""
+    return "Lembrete apagado." if _reminders().delete(id) else "Não encontrei esse lembrete."
+
+
 @server.tool(structured_output=False)
 def agenda_cancelar(id: str) -> str:
     """Cancela (apaga) um compromisso; convidados recebem o aviso de cancelamento."""
