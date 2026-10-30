@@ -24,6 +24,10 @@ Requisito: o Claude Code instalado e logado com a sua conta (`claude` no termina
 - Se apertar o atalho enquanto ele fala, ele para e escuta você.
 - Fechar a janela só esconde o Vestion; ele fica no ícone perto do relógio. Para encerrar: clique com o botão direito no ícone → **Sair**.
 
+## Conectar Gmail e Agenda
+
+Siga o guia [docs/conectar-google.md](docs/conectar-google.md) (uma vez só, gratuito). Depois, no ícone perto do relógio, use **Conectar Google**. Os painéis de Agenda e Gmail passam a mostrar seus dados, e ao abrir o Vestion dá um resumo do dia.
+
 ## Confirmações
 
 Tudo que altera o computador (criar, mover, apagar arquivos, instalar, comandos) mostra o cartão **PODE / CANCELAR**.
