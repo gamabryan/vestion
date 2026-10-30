@@ -55,3 +55,27 @@ def test_closing_hides_and_next_show_brings_it_back():
     assert win._on_closing() is False
     win.show()
     assert win.window.calls == ["hide", "show"]
+
+
+def test_window_opens_maximized(monkeypatch):
+    from lia import ui_window
+
+    created = {}
+
+    class FakeEvents:
+        def __getattr__(self, name):
+            class Hook:
+                def __iadd__(self, fn):
+                    return self
+            return Hook()
+
+    class FakeWin:
+        events = FakeEvents()
+
+    def fake_create_window(*args, **kwargs):
+        created.update(kwargs)
+        return FakeWin()
+
+    monkeypatch.setattr(ui_window.webview, "create_window", fake_create_window)
+    CentralWindow(lambda rid, ok: None)
+    assert created.get("maximized") is True

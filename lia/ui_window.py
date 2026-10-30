@@ -29,7 +29,8 @@ class CentralWindow:
         self._minimized = False
         self.window = webview.create_window(
             "Vestion", url=str(UI_DIR / "index.html"), js_api=_JsApi(on_confirm),
-            width=1280, height=800, min_size=(900, 620), background_color="#03070d")
+            width=1280, height=800, min_size=(900, 620), background_color="#03070d",
+            maximized=True)  # abre ocupando a tela toda
         self.window.events.loaded += self._loaded.set
         self.window.events.closing += self._on_closing
         self.window.events.minimized += self._on_minimized
