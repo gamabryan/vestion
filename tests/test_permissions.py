@@ -26,10 +26,10 @@ def test_describe_write_and_admin():
     assert describe_action("mcp__lia__lia_admin", {"comando": "ipconfig"}).title == "Comando de administrador"
 
 
-def test_spoken_under_25_words_and_ends_with_posso():
+def test_spoken_short_question_even_for_huge_command():
     card = describe_action("Bash", {"command": "echo " + "palavra " * 400})
-    assert len(card.spoken.split()) <= 25
-    assert card.spoken.endswith("Posso?")
+    assert len(card.spoken.split()) <= 12
+    assert card.spoken.startswith("Posso") and card.spoken.endswith("?")
 
 
 def test_unknown_tool_detail_truncated():
@@ -41,3 +41,17 @@ def test_unknown_tool_detail_truncated():
 def test_allowed_tools_has_no_write_or_edit():
     assert not any(t.split("(")[0] in ("Write", "Edit", "MultiEdit", "NotebookEdit") for t in ALLOWED_TOOLS)
     assert "Bash" not in ALLOWED_TOOLS
+
+
+def test_spoken_card_never_reads_command_or_url():
+    cmd = r'Remove-Item "https://www.google.com/maps/search/padaria" C:\Users\PC\Desktop\velho.txt'
+    spoken = describe_action("Bash", {"command": cmd}).spoken
+    assert "http" not in spoken and "Remove-Item" not in spoken and "\\" not in spoken
+    assert len(spoken.split()) <= 12
+    assert spoken.endswith("?")
+
+
+def test_spoken_card_short_for_files():
+    spoken = describe_action("Write", {"file_path": r"C:\Users\PC\Desktop\lista.txt", "content": "x"}).spoken
+    assert "lista.txt" in spoken and "\\" not in spoken
+    assert len(spoken.split()) <= 12

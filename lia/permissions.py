@@ -53,7 +53,9 @@ _RISKY = [
     # contas, senhas e dinheiro
     r"\b(cmdkey|Get-Credential|ConvertTo-SecureString|vaultcmd)\b", r"(?i)\b(password|senha|passwd)\b",
     # comandos que escondem outros comandos (podem fazer qualquer coisa acima)
-    r"\b(iex|Invoke-Expression|Invoke-Command|Start-Process|saps|wscript|cscript|mshta|rundll32|regsvr32|certutil|bitsadmin)\b",
+    r"\b(iex|Invoke-Expression|Invoke-Command|wscript|cscript|mshta|rundll32|regsvr32|certutil|bitsadmin)\b",
+    # Start-Process/start abrindo programa ou site é inofensivo; como administrador ou rodando interpretador, não
+    r"-Verb\s+[\"']?RunAs", r"\b(Start-Process|saps|start)\s+[\"']?(python3?|py|node|ruby|perl|bash|sh)\b",
     r"\b(powershell|pwsh)(\.exe)?\b", r"\bcmd(\.exe)?\s+/[ck]\b", r"\b(bash|sh|zsh)\s+-c\b",
     r"\b(python3?|py|node|ruby|perl)(\.exe)?\s+(-c|-e)\b", r"\.(ps1|bat|cmd|vbs|vbe|js|wsf|hta|reg)\b",
     r"\b(curl|wget|iwr|Invoke-WebRequest)\b.*(\||-OutFile|\s-o\s)",
@@ -79,32 +81,28 @@ class ActionCard:
     spoken: str
 
 
-def _short(text: str, words: int) -> str:
-    parts = text.split()
-    return " ".join(parts[:words]) + (" …" if len(parts) > words else "")
-
-
 def describe_action(tool_name: str, tool_input: dict) -> ActionCard:
+    # O cartão mostra tudo; a fala é curta e nunca lê comandos, endereços ou caminhos.
     path = tool_input.get("file_path") or tool_input.get("path") or ""
+    name = Path(path).name[:40] if path else ""
     if tool_name in ("Bash", "PowerShell"):
-        cmd = tool_input.get("command", "")
-        title, detail, said = "Executar comando", cmd, _short(cmd, 8)
+        title, detail = "Executar comando", tool_input.get("command", "")
+        spoken = "Posso executar o comando que está na tela?"
     elif tool_name == "Write":
-        title = "Substituir arquivo existente" if path and Path(path).exists() else "Criar ou substituir arquivo"
-        detail, said = path, Path(path).name
+        exists = bool(path) and Path(path).exists()
+        title = "Substituir arquivo existente" if exists else "Criar ou substituir arquivo"
+        detail = path
+        spoken = f"Posso {'substituir' if exists else 'criar'} o arquivo {name}?"
     elif tool_name in ("Edit", "MultiEdit"):
-        title, detail, said = "Alterar arquivo", path, Path(path).name
+        title, detail = "Alterar arquivo", path
+        spoken = f"Posso alterar o arquivo {name}?"
     elif tool_name == "mcp__lia__lia_admin":
-        cmd = tool_input.get("comando", "")
-        title, detail, said = "Comando de administrador", cmd, _short(cmd, 8)
+        title, detail = "Comando de administrador", tool_input.get("comando", "")
+        spoken = "Posso executar o comando de administrador que está na tela?"
     else:
         title = f"Ação: {tool_name}"
         detail = json.dumps(tool_input, ensure_ascii=False)[:400]
-        said = ""
-    spoken = f"{title}: {said}. Posso?" if said else f"{title}. Posso?"
-    words = spoken.split()
-    if len(words) > 25:
-        spoken = " ".join(words[:23]) + " … Posso?"
+        spoken = "Posso continuar com a ação que está na tela?"
     return ActionCard(title, detail, spoken)
 
 

@@ -80,3 +80,28 @@ def test_safe_tools_run_directly(tool):
 @pytest.mark.parametrize("tool", ["mcp__lia__lia_admin", "mcp__gmail__send", "FerramentaNova"])
 def test_admin_and_unknown_tools_ask(tool):
     assert needs_confirmation(tool, {})
+
+
+# Abrir programas e sites é inofensivo, mesmo via Start-Process (caso real do log, 2026-10-29)
+@pytest.mark.parametrize("cmd", [
+    'Start-Process chrome "https://www.google.com/maps/search/padaria+perto+de+mim"',
+    'Start-Process "whatsapp:"',
+    "Start-Process notepad",
+    'start chrome "https://youtube.com"',
+    "Start-Process msedge https://g1.globo.com",
+    r"Start-Process explorer C:\Users\PC\Documents",
+])
+def test_opening_apps_and_sites_runs_directly(cmd):
+    assert not bash(cmd)
+
+
+@pytest.mark.parametrize("cmd", [
+    "Start-Process notepad -Verb RunAs",
+    "Start-Process powershell -ArgumentList '-c del x'",
+    'start cmd /c "del a.txt"',
+    "Start-Process wscript script.vbs",
+    r"Start-Process C:\x\instalar.bat",
+    "Start-Process python -ArgumentList 'x.py'",
+])
+def test_start_process_that_can_do_harm_still_asks(cmd):
+    assert bash(cmd)
