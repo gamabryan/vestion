@@ -349,11 +349,6 @@ def test_saying_later_snoozes_ten_minutes(tmp_path):
     assert app.reminders.get(item["id"])["avisado"] is False and hidden == [item["id"]]
 
 
-def test_form_adds_reminder_with_local_time(tmp_path):
-    from datetime import datetime
+def test_app_has_no_manual_reminder_add(tmp_path):
     app, _, _, _ = _reminder_app(tmp_path, [])
-    app.add_reminder("comprar ração", "")
-    app.add_reminder("dentista", "2026-11-02T10:30")
-    items = {r["texto"]: r for r in app.reminders.all()}
-    assert items["comprar ração"]["quando"] is None
-    assert datetime.fromisoformat(items["dentista"]["quando"]) == datetime(2026, 11, 2, 10, 30).astimezone()
+    assert not hasattr(app, "add_reminder")

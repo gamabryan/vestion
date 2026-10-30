@@ -52,17 +52,6 @@
     for (const item of items) {
       const div = document.createElement("div");
       if (item.kind) div.className = `reminder ${item.kind}`;
-      if (name === "lembretes" && item.id) {
-        // caixinha de "feito"
-        const box = document.createElement("button");
-        box.className = "check";
-        box.title = "Marcar como feito";
-        box.addEventListener("click", () => {
-          div.classList.add("done");
-          if (window.pywebview && window.pywebview.api) window.pywebview.api.reminder_done(item.id);
-        });
-        div.appendChild(box);
-      }
       if (item.tag) {
         const em = document.createElement("em");
         em.textContent = item.tag + " ";
@@ -72,16 +61,6 @@
       rows.appendChild(div);
     }
   }
-
-  // Formulário "+ novo lembrete"
-  $("reminder-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const text = $("reminder-text").value.trim();
-    if (!text) return;
-    if (window.pywebview && window.pywebview.api) window.pywebview.api.reminder_add(text, $("reminder-when").value);
-    $("reminder-text").value = "";
-    $("reminder-when").value = "";
-  });
 
   // Aviso na hora do lembrete
   let reminderId = null;

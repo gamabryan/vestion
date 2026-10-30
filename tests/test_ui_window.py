@@ -91,12 +91,21 @@ def test_esc_from_page_hides_window():
     assert win.window.calls == ["hide", "show"]
 
 
-def test_page_can_add_and_complete_reminders():
+def test_reminders_are_voice_only_no_manual_add():
+    from lia.ui_window import UI_DIR, _JsApi
+    api = _JsApi(lambda rid, ok: None)
+    assert not hasattr(api, "reminder_add")
+    html = (UI_DIR / "index.html").read_text(encoding="utf-8")
+    js = (UI_DIR / "app.js").read_text(encoding="utf-8")
+    assert "reminder-form" not in html and "novo lembrete" not in html
+    assert "reminder_add" not in js and "check" not in js.split("function fillRows")[1].split("}\n\n")[0]
+
+
+def test_alert_buttons_still_answer_reminder():
     from lia.ui_window import _JsApi
     calls = []
-    api = _JsApi(lambda rid, ok: None, on_reminder_add=lambda t, q: calls.append(("add", t, q)),
-                 on_reminder_done=lambda rid: calls.append(("done", rid)))
-    api.reminder_add("  pagar a conta ", "2026-10-31T10:00")
-    api.reminder_add("", "")  # vazio é ignorado
+    api = _JsApi(lambda rid, ok: None, on_reminder_done=lambda rid: calls.append(("done", rid)),
+                 on_reminder_snooze=lambda rid: calls.append(("snooze", rid)))
     api.reminder_done("ab12")
-    assert calls == [("add", "pagar a conta", "2026-10-31T10:00"), ("done", "ab12")]
+    api.reminder_snooze("cd34")
+    assert calls == [("done", "ab12"), ("snooze", "cd34")]

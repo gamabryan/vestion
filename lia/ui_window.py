@@ -15,12 +15,10 @@ class _JsApi:
     """Exposto ao JavaScript como pywebview.api."""
 
     def __init__(self, on_confirm: Callable[[str, bool], None], on_hide: Callable[[], None] = lambda: None,
-                 on_reminder_add: Callable[[str, str], None] = lambda t, q: None,
                  on_reminder_done: Callable[[str], None] = lambda rid: None,
                  on_reminder_snooze: Callable[[str], None] = lambda rid: None):
         self._on_confirm = on_confirm
         self._on_hide = on_hide
-        self._on_reminder_add = on_reminder_add
         self._on_reminder_done = on_reminder_done
         self._on_reminder_snooze = on_reminder_snooze
 
@@ -30,12 +28,6 @@ class _JsApi:
     def hide(self) -> None:
         """Esc na central: esconde (o Vestion continua no ícone perto do relógio)."""
         self._on_hide()
-
-    def reminder_add(self, texto: str, quando: str) -> None:
-        """Formulário '+ novo lembrete' do painel. 'quando' vem do campo de data/hora (ou vazio)."""
-        texto = str(texto or "").strip()
-        if texto:
-            self._on_reminder_add(texto, str(quando or ""))
 
     def reminder_done(self, rid: str) -> None:
         self._on_reminder_done(str(rid))
@@ -51,11 +43,9 @@ class CentralWindow:
         self._hidden = False
         self._minimized = False
         # O app liga estes depois de criar o armazenamento de lembretes.
-        self.on_reminder_add: Callable[[str, str], None] = lambda t, q: None
         self.on_reminder_done: Callable[[str], None] = lambda rid: None
         self.on_reminder_snooze: Callable[[str], None] = lambda rid: None
         api = _JsApi(on_confirm, on_hide=self.hide,
-                     on_reminder_add=lambda t, q: self.on_reminder_add(t, q),
                      on_reminder_done=lambda rid: self.on_reminder_done(rid),
                      on_reminder_snooze=lambda rid: self.on_reminder_snooze(rid))
         self.window = webview.create_window(

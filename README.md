@@ -32,7 +32,7 @@ Siga o guia [docs/conectar-google.md](docs/conectar-google.md) (uma vez só, gra
 ## Lembretes
 
 - Pela voz: "Vestion, me lembra de pagar a conta amanhã às dez", "anota: comprar ração", "o que eu tenho para lembrar?", "marca a conta como feita".
-- No painel **LEMBRETES**: digite em **+ novo lembrete**, escolha data e hora se quiser, e clique em **+**. A caixinha ao lado de cada um marca como feito.
+- Tudo é pela voz: o painel **LEMBRETES** só mostra os pendentes (atrasados em laranja).
 - Na hora marcada, a central aparece, ele fala o lembrete e mostra **Feito** / **Adiar 10 min** (ou responda falando "feito" / "adia"). Só funciona com o Vestion aberto; se ele estava fechado, o lembrete aparece como atrasado.
 - Ao abrir, o resumo do dia inclui os lembretes de hoje e os atrasados.
 - Ficam só no PC, em `C:\Users\<você>\Lia\lembretes.json`.

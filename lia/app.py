@@ -279,12 +279,6 @@ class LiaApp:
             self.window.hide_reminder(rid)
         self.on_reminders_changed()
 
-    def add_reminder(self, texto: str, quando: str) -> None:
-        """Do formulário do painel: 'quando' no formato do campo de data/hora (hora local) ou vazio."""
-        when = datetime.fromisoformat(quando).astimezone() if quando else None
-        self.reminders.add(texto, when)
-        self.on_reminders_changed()
-
     def _reminder_loop(self) -> None:
         while self._running:
             try:
@@ -356,7 +350,6 @@ def main() -> None:
     panels = PanelUpdater(window, google_clients, reminders=reminders)
     app.reminders = reminders
     app.on_reminders_changed = panels.refresh_reminders
-    window.on_reminder_add = app.add_reminder
     window.on_reminder_done = app.complete_reminder
     window.on_reminder_snooze = app.snooze_reminder
 
