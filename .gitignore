@@ -5,3 +5,4 @@ config.toml
 models/
 .pytest_cache/
 lia.log
+lia/ui/lia.ico
