@@ -72,11 +72,11 @@ def _reminders_sentence(groups: dict[str, list[dict]] | None) -> str:
 
 
 def briefing_text(now: datetime, events: list[dict] | None, mails: list[dict] | None,
-                  reminders: dict[str, list[dict]] | None = None) -> str:
-    """Saudação, compromissos de hoje (com horário), e-mails que chegaram hoje e lembretes do dia."""
+                  reminders: dict[str, list[dict]] | None = None, weather: str = "") -> str:
+    """Saudação, previsão do tempo, compromissos de hoje (com horário), e-mails de hoje e lembretes do dia."""
     if events is None or mails is None:
-        parts = [NOT_CONNECTED]
+        parts = [NOT_CONNECTED, weather]
     else:
-        parts = [f"{_greeting(now)}.", _events_sentence(events), _mails_sentence(mails)]
+        parts = [f"{_greeting(now)}.", weather, _events_sentence(events), _mails_sentence(mails)]
     parts.append(_reminders_sentence(reminders))
     return " ".join(p for p in parts if p)

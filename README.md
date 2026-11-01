@@ -51,6 +51,8 @@ Comandos de administrador também mostram a janela de permissão do próprio Win
 
 Copie `config.example.toml` para `config.toml` e ajuste: tecla de atalho, voz, modelo do Whisper.
 
+Previsão do tempo no resumo ao abrir: preencha `weather_place`, `weather_lat` e `weather_lon` no `config.toml` (usa o Open-Meteo, grátis e sem conta). Sem esses campos, ele não fala do tempo.
+
 ## Memória
 
 O Vestion guarda fatos e preferências em `C:\Users\<você>\Lia\memoria.md`. Pode abrir e editar à vontade.

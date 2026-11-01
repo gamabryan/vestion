@@ -200,3 +200,14 @@ def test_briefing_reminders_even_when_google_not_connected(tmp_path):
     text = briefing_text(now, None, None, s.groups(now))
     assert text.startswith("Oi, estou pronto. Preciso que você conecte")
     assert text.endswith("Você tem 1 lembrete hoje: pagar a conta às dez da manhã.")
+
+
+def test_briefing_says_weather_right_after_greeting():
+    from datetime import datetime
+    from lia.briefing import briefing_text
+    now = datetime(2026, 10, 31, 8, 0).astimezone()
+    text = briefing_text(now, [], [], None, "No centro agora faz 24 graus.")
+    assert text.startswith("Bom dia. No centro agora faz 24 graus. Sua agenda está livre hoje.")
+    offline = briefing_text(now, None, None, None, "No centro agora faz 24 graus.")
+    assert "No centro agora faz 24 graus." in offline
+    assert briefing_text(now, [], [], None) .startswith("Bom dia. Sua agenda")

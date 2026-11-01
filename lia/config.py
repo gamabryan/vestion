@@ -15,6 +15,10 @@ class Config:
     session_idle_hours: float = 2.0
     confirm_timeout_s: int = 60
     voice_confirm_window_s: int = 15
+    # Previsão do tempo no resumo ao abrir (vazio = sem previsão). Fica no config.toml, fora do GitHub.
+    weather_place: str = ""          # como falar, ex. "no centro de São Paulo"
+    weather_lat: float | None = None
+    weather_lon: float | None = None
 
 
 def load_config(path: Path) -> Config:

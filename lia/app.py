@@ -320,6 +320,7 @@ def main() -> None:
     from lia.reminders import ReminderStore
     from lia.tray import ICON_PATH, save_ico, start_tray
     from lia.ui_window import CentralWindow, load_theme, save_theme
+    from lia.weather import fetch_forecast, weather_sentence
 
     from lia.appid import set_process_app_id
     set_process_app_id()  # ícone próprio na barra de tarefas, em vez do Python
@@ -371,13 +372,26 @@ def main() -> None:
 
     def briefing():
         now = datetime.now().astimezone()
+        # Previsão do tempo em paralelo com o Google, para caber no tempo do resumo.
+        forecast: list = []
+        weather_job = None
+        if cfg.weather_lat is not None and cfg.weather_lon is not None:
+            weather_job = threading.Thread(
+                target=lambda: forecast.append(fetch_forecast(cfg.weather_lat, cfg.weather_lon)), daemon=True)
+            weather_job.start()
         reminders.sync()
         groups = reminders.groups(now)
         clients = google_clients()
-        if not clients:
-            return briefing_text(now, None, None, groups)
-        gmail, calendar = clients
-        return briefing_text(now, calendar.today(now), gmail.today(now, 10), groups)
+        mails_events = None
+        if clients:
+            gmail, calendar = clients
+            mails_events = (calendar.today(now), gmail.today(now, 10))
+        if weather_job:
+            weather_job.join(3)
+        weather = weather_sentence(cfg.weather_place or "aqui", forecast[0] if forecast else None)
+        if not mails_events:
+            return briefing_text(now, None, None, groups, weather)
+        return briefing_text(now, *mails_events, groups, weather)
 
     app.briefing = briefing
     app.taint = taint

@@ -8,3 +8,8 @@ whisper_model = "auto"   # auto, small, medium
 session_idle_hours = 2.0
 confirm_timeout_s = 60
 voice_confirm_window_s = 15
+
+# Previsão do tempo no resumo ao abrir (deixe sem para não falar do tempo)
+# weather_place = "no centro de São Paulo"
+# weather_lat = -23.55
+# weather_lon = -46.63
